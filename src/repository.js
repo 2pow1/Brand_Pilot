@@ -163,3 +163,31 @@ export async function markChannelOutputRendered(store, item, channelOutput, arti
     };
   });
 }
+
+export async function markChannelOutputPublished(store, item, channelOutput, publishedUrl, payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.PUBLISHED);
+
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputPublished({
+      id: channelOutput.channel_output_id || channelOutput.id,
+      status: CHANNEL_STATUSES.PUBLISHED,
+      publishedUrl
+    });
+
+    const updated = await store.updateContentStatus({
+      id: item.id,
+      status: CONTENT_STATUSES.PUBLISHED,
+      eventType: `content.transition.${item.status}.${CONTENT_STATUSES.PUBLISHED}`,
+      payload: {
+        ...payload,
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        publishedUrl
+      }
+    });
+
+    return {
+      item: updated,
+      output
+    };
+  });
+}

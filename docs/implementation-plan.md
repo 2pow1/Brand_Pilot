@@ -36,7 +36,7 @@
 
 ## 현재 구현 위치
 
-현재 코드는 7단계까지 로컬에서 검증되었습니다.
+현재 코드는 8단계의 API 호출부까지 로컬에서 검증되었습니다.
 
 - `collect`: 자료 후보를 `collected`로 저장
 - `draft`: 초안을 생성해 `draft_created`로 전환
@@ -44,8 +44,10 @@
 - `review approve/reject`: 검수 결과 기록
 - `channel generate`: 승인된 초안을 Instagram 카드뉴스 payload로 변환하고 `channel_generated`로 전환
 - `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`으로 전환
+- `instagram publish`: 공개 이미지 URL이 준비된 카드뉴스를 Instagram Graph API로 게시하고 `published`로 전환
+- `instagram publish --mock`: Meta API 호출 없이 게시 상태 전이를 검증
 
-다음 구현 단계는 8단계 Instagram 실제 게시 또는 9단계 Notion 기록 미러입니다.
+다음 구현 단계는 실제 게시용 공개 이미지 URL을 만들기 위한 Supabase Storage 업로드 또는 9단계 Notion 기록 미러입니다.
 
 ## 운영 DB 기준
 

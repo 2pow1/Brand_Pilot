@@ -366,6 +366,32 @@ export function createSupabaseStore(config) {
       });
     },
 
+    async listChannelOutputsReadyToPublish({ channelId, limit = 10 } = {}) {
+      const rows = await request('channel_outputs', {
+        search: {
+          select: '*,content_items!inner(*)',
+          channel_id: `eq.${channelId}`,
+          status: `eq.${CHANNEL_STATUSES.PUBLISH_PENDING}`,
+          'content_items.status': `eq.${CONTENT_STATUSES.PUBLISH_PENDING}`,
+          order: 'created_at.asc',
+          limit
+        }
+      });
+
+      return rows.map((row) => {
+        const item = row.content_items;
+        return {
+          ...item,
+          channel_output_id: row.id,
+          output_channel_id: row.channel_id,
+          channel_status: row.status,
+          channel_payload_json: JSON.stringify(row.payload_json || {}),
+          channel_artifact_path: row.artifact_path,
+          channel_published_url: row.published_url
+        };
+      });
+    },
+
     async updateChannelOutputArtifact({ id, status, artifactPath }) {
       const output = await patchOne(
         'channel_outputs',
@@ -373,6 +399,21 @@ export function createSupabaseStore(config) {
         {
           status,
           artifact_path: artifactPath,
+          updated_at: nowIso(),
+          last_error: ''
+        }
+      );
+
+      return normalizePayloadJson(output);
+    },
+
+    async updateChannelOutputPublished({ id, status, publishedUrl }) {
+      const output = await patchOne(
+        'channel_outputs',
+        { id: `eq.${id}` },
+        {
+          status,
+          published_url: publishedUrl,
           updated_at: nowIso(),
           last_error: ''
         }

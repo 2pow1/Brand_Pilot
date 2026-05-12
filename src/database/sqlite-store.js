@@ -4,11 +4,13 @@ import {
   getContentItemByFingerprint,
   insertContentItem,
   listChannelOutputsReadyToRender,
+  listChannelOutputsReadyToPublish,
   listContentItemsByStatus,
   migrate,
   openDatabase,
   summarize,
   updateChannelOutputArtifact,
+  updateChannelOutputPublished,
   updateContentDraft,
   updateContentStatus,
   updateReviewDecision,
@@ -79,8 +81,16 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
       return listChannelOutputsReadyToRender(db, options);
     },
 
+    async listChannelOutputsReadyToPublish(options) {
+      return listChannelOutputsReadyToPublish(db, options);
+    },
+
     async updateChannelOutputArtifact(input) {
       return updateChannelOutputArtifact(db, input);
+    },
+
+    async updateChannelOutputPublished(input) {
+      return updateChannelOutputPublished(db, input);
     },
 
     async summarize() {

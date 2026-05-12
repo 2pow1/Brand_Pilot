@@ -34,3 +34,5 @@ DATABASE_URL=file:./data/brand-pilot.sqlite
 ```
 
 For free-first scheduled operation, add the same production values as GitHub repository secrets and enable `.github/workflows/brand-pilot-schedule.yml`.
+
+Instagram publishing also needs public image URLs. The current `instagram publish` command can publish when the channel artifact manifest or payload includes public slide URLs; local render files must be uploaded to public storage first.

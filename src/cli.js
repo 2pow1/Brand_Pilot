@@ -20,6 +20,7 @@ Usage:
   node src/cli.js review reject <content-id> [reason]
   node src/cli.js channel generate [--limit <n>]
   node src/cli.js instagram render [--limit <n>]
+  node src/cli.js instagram publish [--mock] [--limit <n>]
   node src/cli.js transitions
 `);
 }
@@ -425,13 +426,78 @@ async function runInstagramRender(argv) {
   await store.close();
 }
 
+async function runInstagramPublish(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const { createMockInstagramPublishResult, loadInstagramPublishInput, publishInstagramCardNews } = await import(
+    './publish/instagram.js'
+  );
+  const { markChannelOutputPublished } = await import('./repository.js');
+  const { store } = await openAppDatabase();
+  const rows = await store.listChannelOutputsReadyToPublish({
+    channelId: 'instagram',
+    limit: options.limit
+  });
+  const published = [];
+  const failed = [];
+
+  for (const row of rows) {
+    try {
+      const payload = JSON.parse(row.channel_payload_json);
+      const result = options.mock
+        ? createMockInstagramPublishResult(row)
+        : await publishInstagramCardNews({
+            config,
+            ...(await loadInstagramPublishInput({
+              row,
+              payload
+            }))
+          });
+      const saved = await markChannelOutputPublished(store, row, row, result.publishedUrl, {
+        mode: options.mock ? 'mock' : 'instagram-graph-api',
+        mediaId: result.mediaId,
+        containerId: result.containerId,
+        childContainerIds: result.childContainerIds
+      });
+
+      published.push({
+        id: saved.item.id,
+        sourceTitle: saved.item.source_title,
+        status: saved.item.status,
+        channelId: saved.output.channel_id,
+        channelStatus: saved.output.status,
+        publishedUrl: saved.output.published_url
+      });
+    } catch (error) {
+      failed.push({
+        id: row.id,
+        sourceTitle: row.source_title,
+        error: error.message
+      });
+    }
+  }
+
+  printDatabaseInfo(store);
+  console.log(JSON.stringify({
+    mode: options.mock ? 'mock' : 'instagram-graph-api',
+    publishedCount: published.length,
+    failedCount: failed.length,
+    published,
+    failed,
+    summary: await store.summarize()
+  }, null, 2));
+  await store.close();
+}
+
 async function runInstagram(argv) {
   const action = argv[0];
 
   if (action === 'render') {
     await runInstagramRender(argv.slice(1));
+  } else if (action === 'publish') {
+    await runInstagramPublish(argv.slice(1));
   } else {
-    throw new Error('instagram command must be: render');
+    throw new Error('instagram command must be one of: render, publish');
   }
 }
 

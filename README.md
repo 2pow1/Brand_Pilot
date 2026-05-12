@@ -59,6 +59,8 @@ node --no-warnings=ExperimentalWarning src/cli.js review approve <content-id>
 node --no-warnings=ExperimentalWarning src/cli.js review reject <content-id>
 node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram render --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js instagram publish --mock --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1
 node --no-warnings=ExperimentalWarning --test
 ```
 
@@ -73,6 +75,8 @@ node --no-warnings=ExperimentalWarning --test
 `channel generate`는 승인된 공통 초안을 채널별 payload로 변환합니다. 현재 활성 채널은 Instagram이며, 1080x1080 카드뉴스 5장 구조, caption, hashtags, CTA, QR target URL을 `channel_outputs`에 저장합니다.
 
 `instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 1080x1080 PNG 5장과 `manifest.json`을 생성합니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
+
+`instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다. 실제 게시에는 Meta가 접근할 수 있는 공개 이미지 URL이 필요하므로, 로컬 PNG만 있는 상태에서는 먼저 Supabase Storage 같은 공개 저장소 업로드 단계가 필요합니다.
 
 전체 구현 단계는 `docs/implementation-plan.md`에 정리되어 있습니다.
 

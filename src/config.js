@@ -7,6 +7,7 @@ const DEFAULT_SUPABASE_SCHEMA = 'public';
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_DISCORD_BASE_URL = 'https://discord.com/api/v10';
+const DEFAULT_META_GRAPH_BASE_URL = 'https://graph.facebook.com/v25.0';
 
 function parseDotEnv(content) {
   const values = {};
@@ -66,6 +67,7 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     notionToken: merged.NOTION_TOKEN || '',
     notionDatabaseId: merged.NOTION_DATABASE_ID || '',
     metaAccessToken: merged.META_ACCESS_TOKEN || '',
+    metaGraphBaseUrl: merged.META_GRAPH_BASE_URL || DEFAULT_META_GRAPH_BASE_URL,
     instagramBusinessAccountId: merged.INSTAGRAM_BUSINESS_ACCOUNT_ID || ''
   };
 }

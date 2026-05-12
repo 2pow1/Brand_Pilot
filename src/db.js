@@ -288,6 +288,26 @@ export function listChannelOutputsReadyToRender(db, { channelId, limit = 10 } = 
   `).all(channelId, CHANNEL_STATUSES.GENERATED, CONTENT_STATUSES.CHANNEL_GENERATED, limit);
 }
 
+export function listChannelOutputsReadyToPublish(db, { channelId, limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT
+      c.*,
+      co.id AS channel_output_id,
+      co.channel_id AS output_channel_id,
+      co.status AS channel_status,
+      co.payload_json AS channel_payload_json,
+      co.artifact_path AS channel_artifact_path,
+      co.published_url AS channel_published_url
+    FROM channel_outputs co
+    JOIN content_items c ON c.id = co.content_item_id
+    WHERE co.channel_id = ?
+      AND co.status = ?
+      AND c.status = ?
+    ORDER BY co.created_at ASC
+    LIMIT ?
+  `).all(channelId, CHANNEL_STATUSES.PUBLISH_PENDING, CONTENT_STATUSES.PUBLISH_PENDING, limit);
+}
+
 export function updateChannelOutputArtifact(db, { id, status, artifactPath }) {
   const updatedAt = nowIso();
 
@@ -299,6 +319,25 @@ export function updateChannelOutputArtifact(db, { id, status, artifactPath }) {
         last_error = ''
     WHERE id = ?
   `).run(status, artifactPath, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Channel output not found: ${id}`);
+  }
+
+  return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
+}
+
+export function updateChannelOutputPublished(db, { id, status, publishedUrl }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE channel_outputs
+    SET status = ?,
+        published_url = ?,
+        updated_at = ?,
+        last_error = ''
+    WHERE id = ?
+  `).run(status, publishedUrl, updatedAt, id);
 
   if (result.changes === 0) {
     throw new Error(`Channel output not found: ${id}`);

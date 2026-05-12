@@ -6,6 +6,7 @@ import {
   approveContent,
   createCollectedContent,
   markChannelOutputRendered,
+  markChannelOutputPublished,
   requestReviewForContent,
   saveChannelOutputsForContent,
   saveDraftForContent
@@ -84,6 +85,48 @@ test('marks rendered channel output as publish pending', async () => {
   assert.equal(rendered.item.status, 'publish_pending');
   assert.equal(rendered.output.status, 'publish_pending');
   assert.equal(rendered.output.artifact_path, 'artifacts/generated/instagram/content_123');
+
+  await store.close();
+});
+
+test('marks published channel output as published', async () => {
+  const db = openDatabase(':memory:');
+  migrate(db);
+  const store = createSqliteStore(db);
+
+  const approved = await createApprovedItem(store);
+  const generated = await saveChannelOutputsForContent(store, approved, [
+    {
+      channelId: 'instagram',
+      payload: {
+        template: 'instagram-card-news-v1',
+        slides: []
+      }
+    }
+  ]);
+  const output = generated.outputs[0];
+  const rendered = await markChannelOutputRendered(
+    store,
+    generated.item,
+    {
+      channel_output_id: output.id,
+      output_channel_id: output.channel_id
+    },
+    'https://storage.example.com/instagram/content_123/manifest.json'
+  );
+  const published = await markChannelOutputPublished(
+    store,
+    rendered.item,
+    {
+      channel_output_id: rendered.output.id,
+      output_channel_id: rendered.output.channel_id
+    },
+    'https://www.instagram.com/p/media_123/'
+  );
+
+  assert.equal(published.item.status, 'published');
+  assert.equal(published.output.status, 'published');
+  assert.equal(published.output.published_url, 'https://www.instagram.com/p/media_123/');
 
   await store.close();
 });

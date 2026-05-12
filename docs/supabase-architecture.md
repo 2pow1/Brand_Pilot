@@ -46,6 +46,7 @@ Supabase:
 파일 스토리지:
 - 렌더링된 Instagram PNG
 - manifest
+- Instagram Graph API가 접근할 수 있는 공개 이미지 URL
 
 Notion:
 - 사람이 보기 위한 기록 미러
@@ -81,6 +82,7 @@ GitHub Actions Secrets:
 - `NOTION_TOKEN`
 - `NOTION_DATABASE_ID`
 - `META_ACCESS_TOKEN`
+- `META_GRAPH_BASE_URL`
 - `INSTAGRAM_BUSINESS_ACCOUNT_ID`
 
 Supabase Edge Function Secrets:
@@ -92,3 +94,4 @@ Supabase Edge Function Secrets:
 
 - GitHub Actions schedule은 별도 서버 없이 주기 job을 실행할 수 있습니다.
 - Supabase Edge Functions는 Discord interaction처럼 즉시 받아야 하는 webhook에 적합합니다.
+- Instagram 실제 게시는 로컬 파일 경로가 아니라 공개 이미지 URL을 요구하므로 Storage 업로드 단계가 필요합니다.
