@@ -191,3 +191,32 @@ export async function markChannelOutputPublished(store, item, channelOutput, pub
     };
   });
 }
+
+export async function markChannelOutputUploaded(store, item, channelOutput, artifactPath, payload = {}) {
+  if (item.status !== CONTENT_STATUSES.PUBLISH_PENDING) {
+    throw new Error(`Expected publish_pending content before upload, received: ${item.status}`);
+  }
+
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputArtifact({
+      id: channelOutput.channel_output_id || channelOutput.id,
+      status: CHANNEL_STATUSES.PUBLISH_PENDING,
+      artifactPath
+    });
+
+    await store.insertEvent({
+      contentItemId: item.id,
+      eventType: 'content.channel.uploaded',
+      payload: {
+        ...payload,
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        artifactPath
+      }
+    });
+
+    return {
+      item,
+      output
+    };
+  });
+}

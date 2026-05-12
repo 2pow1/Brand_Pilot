@@ -59,6 +59,7 @@ node --no-warnings=ExperimentalWarning src/cli.js review approve <content-id>
 node --no-warnings=ExperimentalWarning src/cli.js review reject <content-id>
 node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram render --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js instagram upload --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram publish --mock --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1
 node --no-warnings=ExperimentalWarning --test
@@ -76,7 +77,9 @@ node --no-warnings=ExperimentalWarning --test
 
 `instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 1080x1080 PNG 5장과 `manifest.json`을 생성합니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
 
-`instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다. 실제 게시에는 Meta가 접근할 수 있는 공개 이미지 URL이 필요하므로, 로컬 PNG만 있는 상태에서는 먼저 Supabase Storage 같은 공개 저장소 업로드 단계가 필요합니다.
+`instagram upload`는 렌더된 PNG와 manifest를 Supabase Storage public bucket에 업로드하고, `channel_outputs.artifact_path`를 공개 manifest URL로 바꿉니다.
+
+`instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다.
 
 전체 구현 단계는 `docs/implementation-plan.md`에 정리되어 있습니다.
 

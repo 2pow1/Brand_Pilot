@@ -35,7 +35,7 @@ const PIPELINE_STAGES = [
     id: 'publish',
     label: '게시 대기',
     status: CONTENT_STATUSES.PUBLISH_PENDING,
-    nextCommand: 'node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1'
+    nextCommand: 'node --no-warnings=ExperimentalWarning src/cli.js instagram upload --limit 1'
   },
   {
     id: 'done',

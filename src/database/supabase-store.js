@@ -179,6 +179,10 @@ export function createSupabaseStore(config) {
       return rows[0];
     },
 
+    async insertEvent(input) {
+      return insertEvent(input);
+    },
+
     async listContentItemsByStatus(status, { limit = 10 } = {}) {
       return request('content_items', {
         search: {

@@ -44,10 +44,11 @@
 - `review approve/reject`: 검수 결과 기록
 - `channel generate`: 승인된 초안을 Instagram 카드뉴스 payload로 변환하고 `channel_generated`로 전환
 - `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`으로 전환
+- `instagram upload`: 로컬 렌더 산출물을 Supabase Storage public bucket에 업로드하고 공개 manifest URL을 기록
 - `instagram publish`: 공개 이미지 URL이 준비된 카드뉴스를 Instagram Graph API로 게시하고 `published`로 전환
 - `instagram publish --mock`: Meta API 호출 없이 게시 상태 전이를 검증
 
-다음 구현 단계는 실제 게시용 공개 이미지 URL을 만들기 위한 Supabase Storage 업로드 또는 9단계 Notion 기록 미러입니다.
+다음 구현 단계는 실제 계정으로 `render -> upload -> publish` E2E를 검증하거나 9단계 Notion 기록 미러입니다.
 
 ## 운영 DB 기준
 

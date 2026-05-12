@@ -68,6 +68,7 @@ DATABASE_PROVIDER=supabase
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_SCHEMA=public
+SUPABASE_STORAGE_BUCKET=brand-pilot-instagram
 DISCORD_PUBLIC_KEY=
 ```
 
@@ -76,6 +77,7 @@ DISCORD_PUBLIC_KEY=
 GitHub Actions Secrets:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_STORAGE_BUCKET`
 - `OPENAI_API_KEY`
 - `DISCORD_BOT_TOKEN`
 - `DISCORD_REVIEW_CHANNEL_ID`
@@ -94,4 +96,4 @@ Supabase Edge Function Secrets:
 
 - GitHub Actions schedule은 별도 서버 없이 주기 job을 실행할 수 있습니다.
 - Supabase Edge Functions는 Discord interaction처럼 즉시 받아야 하는 webhook에 적합합니다.
-- Instagram 실제 게시는 로컬 파일 경로가 아니라 공개 이미지 URL을 요구하므로 Storage 업로드 단계가 필요합니다.
+- Instagram 실제 게시는 로컬 파일 경로가 아니라 공개 이미지 URL을 요구하므로 `instagram upload`가 Supabase Storage public URL을 만든 뒤 `instagram publish`가 실행됩니다.

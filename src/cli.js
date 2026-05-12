@@ -20,6 +20,7 @@ Usage:
   node src/cli.js review reject <content-id> [reason]
   node src/cli.js channel generate [--limit <n>]
   node src/cli.js instagram render [--limit <n>]
+  node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
   node src/cli.js transitions
 `);
@@ -489,15 +490,88 @@ async function runInstagramPublish(argv) {
   await store.close();
 }
 
+async function runInstagramUpload(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const { uploadInstagramRenderArtifact } = await import('./storage/supabase.js');
+  const { markChannelOutputUploaded } = await import('./repository.js');
+  const { store } = await openAppDatabase();
+  const rows = await store.listChannelOutputsReadyToPublish({
+    channelId: 'instagram',
+    limit: options.limit
+  });
+  const uploaded = [];
+  const skipped = [];
+  const failed = [];
+
+  for (const row of rows) {
+    try {
+      const payload = JSON.parse(row.channel_payload_json);
+      const result = await uploadInstagramRenderArtifact({
+        config,
+        row,
+        payload
+      });
+
+      if (!result.uploaded) {
+        skipped.push({
+          id: row.id,
+          sourceTitle: row.source_title,
+          artifactPath: result.manifestPublicUrl,
+          reason: 'already-public'
+        });
+        continue;
+      }
+
+      const saved = await markChannelOutputUploaded(store, row, row, result.manifestPublicUrl, {
+        mode: 'supabase-storage',
+        bucket: result.bucket,
+        manifestObjectPath: result.manifestObjectPath,
+        slideCount: result.slides.length
+      });
+
+      uploaded.push({
+        id: saved.item.id,
+        sourceTitle: saved.item.source_title,
+        status: saved.item.status,
+        channelId: saved.output.channel_id,
+        channelStatus: saved.output.status,
+        artifactPath: saved.output.artifact_path,
+        slideCount: result.slides.length
+      });
+    } catch (error) {
+      failed.push({
+        id: row.id,
+        sourceTitle: row.source_title,
+        error: error.message
+      });
+    }
+  }
+
+  printDatabaseInfo(store);
+  console.log(JSON.stringify({
+    uploadedCount: uploaded.length,
+    skippedCount: skipped.length,
+    failedCount: failed.length,
+    uploaded,
+    skipped,
+    failed,
+    summary: await store.summarize()
+  }, null, 2));
+  await store.close();
+}
+
 async function runInstagram(argv) {
   const action = argv[0];
 
   if (action === 'render') {
     await runInstagramRender(argv.slice(1));
+  } else if (action === 'upload') {
+    await runInstagramUpload(argv.slice(1));
   } else if (action === 'publish') {
     await runInstagramPublish(argv.slice(1));
   } else {
-    throw new Error('instagram command must be one of: render, publish');
+    throw new Error('instagram command must be one of: render, upload, publish');
   }
 }
 

@@ -2,6 +2,7 @@ import { databasePathFromUrl } from '../config.js';
 import {
   getContentItem,
   getContentItemByFingerprint,
+  insertEvent,
   insertContentItem,
   listChannelOutputsReadyToRender,
   listChannelOutputsReadyToPublish,
@@ -51,6 +52,10 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
 
     async insertContentItem(input) {
       return insertContentItem(db, input);
+    },
+
+    async insertEvent(input) {
+      return insertEvent(db, input);
     },
 
     async listContentItemsByStatus(status, options) {

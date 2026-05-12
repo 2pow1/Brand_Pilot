@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 const DEFAULT_DATABASE_URL = 'file:./data/brand-pilot.sqlite';
 const DEFAULT_DATABASE_PROVIDER = 'sqlite';
 const DEFAULT_SUPABASE_SCHEMA = 'public';
+const DEFAULT_SUPABASE_STORAGE_BUCKET = 'brand-pilot-instagram';
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_DISCORD_BASE_URL = 'https://discord.com/api/v10';
@@ -57,6 +58,7 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     supabaseUrl: merged.SUPABASE_URL || '',
     supabaseServiceRoleKey: merged.SUPABASE_SERVICE_ROLE_KEY || '',
     supabaseSchema: merged.SUPABASE_SCHEMA || DEFAULT_SUPABASE_SCHEMA,
+    supabaseStorageBucket: merged.SUPABASE_STORAGE_BUCKET || DEFAULT_SUPABASE_STORAGE_BUCKET,
     openaiApiKey: merged.OPENAI_API_KEY || '',
     openaiModel: merged.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
     openaiBaseUrl: merged.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL,
