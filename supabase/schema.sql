@@ -25,6 +25,8 @@ create table if not exists public.content_items (
   review_requested_at timestamptz,
   review_decision_at timestamptz,
   rejection_reason text not null default '',
+  notion_page_id text not null default '',
+  notion_synced_at timestamptz,
   attempt_count integer not null default 0,
   last_error text not null default '',
   created_at timestamptz not null default now(),

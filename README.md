@@ -62,6 +62,7 @@ node --no-warnings=ExperimentalWarning src/cli.js instagram render --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram upload --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram publish --mock --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
 node --no-warnings=ExperimentalWarning --test
 ```
 
@@ -81,10 +82,12 @@ node --no-warnings=ExperimentalWarning --test
 
 `instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다.
 
+`notion sync`는 최근 콘텐츠 상태를 Notion 데이터소스에 생성/업데이트합니다. Notion은 읽기용 미러이며 실제 상태 관리는 Supabase/SQLite 저장소가 담당합니다. 필요한 Notion 속성은 `docs/notion-mirror.md`에 정리되어 있습니다.
+
 전체 구현 단계는 `docs/implementation-plan.md`에 정리되어 있습니다.
 
 ## 무료 우선 운영
 
 `.github/workflows/brand-pilot-schedule.yml`은 6시간마다 GitHub Actions에서 수집, 초안 생성, Discord 검수 요청, 승인된 콘텐츠의 채널 payload 생성을 실행합니다.
 
-GitHub Secrets에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID`를 등록합니다. Discord 승인/거절 버튼 수신은 `supabase/functions/discord-review` Edge Function을 배포해 처리합니다.
+GitHub Secrets에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID`, `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`를 등록합니다. Discord 승인/거절 버튼 수신은 `supabase/functions/discord-review` Edge Function을 배포해 처리합니다.

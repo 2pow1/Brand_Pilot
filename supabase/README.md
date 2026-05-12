@@ -4,7 +4,8 @@
 2. Open the SQL Editor.
 3. Run `supabase/schema.sql`.
 4. Run `supabase/storage.sql` to create the public Instagram artifact bucket.
-5. Add server-side environment variables:
+5. Run `supabase/notion.sql` if `schema.sql` was already applied before the Notion columns were added.
+6. Add server-side environment variables:
 
 ```text
 DATABASE_PROVIDER=supabase
@@ -13,6 +14,8 @@ SUPABASE_SERVICE_ROLE_KEY=<server-only-service-role-key>
 SUPABASE_SCHEMA=public
 SUPABASE_STORAGE_BUCKET=brand-pilot-instagram
 DISCORD_PUBLIC_KEY=<discord-application-public-key>
+NOTION_TOKEN=<notion-internal-integration-token>
+NOTION_DATA_SOURCE_ID=<notion-data-source-id>
 ```
 
 The service role key is for server-side jobs only. Do not expose it in browser code.

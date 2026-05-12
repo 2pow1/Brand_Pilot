@@ -32,3 +32,18 @@ test('loads supabase database settings from environment', () => {
   assert.equal(config.supabaseServiceRoleKey, 'service-role-key');
   assert.equal(config.supabaseSchema, 'brand_pilot');
 });
+
+test('loads notion data source settings with database id fallback', () => {
+  const config = loadConfig({
+    cwd: EMPTY_ENV_CWD,
+    env: {
+      NOTION_TOKEN: 'notion-token',
+      NOTION_DATABASE_ID: 'legacy-database-id'
+    }
+  });
+
+  assert.equal(config.notionToken, 'notion-token');
+  assert.equal(config.notionDataSourceId, 'legacy-database-id');
+  assert.equal(config.notionBaseUrl, 'https://api.notion.com/v1');
+  assert.equal(config.notionVersion, '2026-03-11');
+});

@@ -13,6 +13,7 @@
     "review": "node --no-warnings=ExperimentalWarning src/cli.js review",
     "channel": "node --no-warnings=ExperimentalWarning src/cli.js channel",
     "instagram": "node --no-warnings=ExperimentalWarning src/cli.js instagram",
+    "notion": "node --no-warnings=ExperimentalWarning src/cli.js notion",
     "test": "node --no-warnings=ExperimentalWarning --test"
   },
   "engines": {

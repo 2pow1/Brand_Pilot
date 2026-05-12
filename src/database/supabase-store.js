@@ -194,6 +194,32 @@ export function createSupabaseStore(config) {
       });
     },
 
+    async listContentItemsForNotionSync({ limit = 10 } = {}) {
+      const unsynced = await request('content_items', {
+        search: {
+          select: '*',
+          notion_page_id: 'eq.',
+          order: 'updated_at.desc',
+          limit
+        }
+      });
+
+      if (unsynced.length >= limit) {
+        return unsynced;
+      }
+
+      const synced = await request('content_items', {
+        search: {
+          select: '*',
+          notion_page_id: 'neq.',
+          order: 'updated_at.desc',
+          limit: limit - unsynced.length
+        }
+      });
+
+      return [...unsynced, ...synced];
+    },
+
     async updateContentDraft({ id, draftTitle, draftBody, status, eventType, payload = {} }) {
       const updated = await patchOne(
         'content_items',
@@ -276,6 +302,26 @@ export function createSupabaseStore(config) {
         contentItemId: id,
         eventType,
         payload: { ...payload, status }
+      });
+
+      return updated;
+    },
+
+    async updateContentNotionSync({ id, notionPageId, eventType, payload = {} }) {
+      const timestamp = nowIso();
+      const updated = await patchOne(
+        'content_items',
+        { id: `eq.${id}` },
+        {
+          notion_page_id: notionPageId,
+          notion_synced_at: timestamp
+        }
+      );
+
+      await insertEvent({
+        contentItemId: id,
+        eventType,
+        payload: { ...payload, notionPageId }
       });
 
       return updated;

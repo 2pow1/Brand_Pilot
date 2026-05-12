@@ -22,6 +22,7 @@ Usage:
   node src/cli.js instagram render [--limit <n>]
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
+  node src/cli.js notion sync [--limit <n>]
   node src/cli.js transitions
 `);
 }
@@ -575,6 +576,68 @@ async function runInstagram(argv) {
   }
 }
 
+async function runNotionSync(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const { syncContentItemToNotion } = await import('./notion/mirror.js');
+  const { markContentNotionSynced } = await import('./repository.js');
+  const { store } = await openAppDatabase();
+  const items = await store.listContentItemsForNotionSync({
+    limit: options.limit
+  });
+  const synced = [];
+  const failed = [];
+
+  for (const item of items) {
+    try {
+      const result = await syncContentItemToNotion({
+        config,
+        item
+      });
+      const updated = await markContentNotionSynced(store, item, result.pageId, {
+        mode: 'notion-api',
+        action: result.action,
+        url: result.url
+      });
+
+      synced.push({
+        id: updated.id,
+        sourceTitle: updated.source_title,
+        status: updated.status,
+        notionPageId: updated.notion_page_id,
+        action: result.action,
+        url: result.url
+      });
+    } catch (error) {
+      failed.push({
+        id: item.id,
+        sourceTitle: item.source_title,
+        error: error.message
+      });
+    }
+  }
+
+  printDatabaseInfo(store);
+  console.log(JSON.stringify({
+    syncedCount: synced.length,
+    failedCount: failed.length,
+    synced,
+    failed,
+    summary: await store.summarize()
+  }, null, 2));
+  await store.close();
+}
+
+async function runNotion(argv) {
+  const action = argv[0];
+
+  if (action === 'sync') {
+    await runNotionSync(argv.slice(1));
+  } else {
+    throw new Error('notion command must be: sync');
+  }
+}
+
 function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
@@ -591,6 +654,7 @@ async function main() {
   else if (command === 'review') await runReview(args);
   else if (command === 'channel') await runChannel(args);
   else if (command === 'instagram') await runInstagram(args);
+  else if (command === 'notion') await runNotion(args);
   else if (command === 'transitions') runTransitions();
   else {
     printUsage();

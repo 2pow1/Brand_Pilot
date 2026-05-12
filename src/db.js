@@ -15,6 +15,13 @@ export function openDatabase(path) {
   return db;
 }
 
+function ensureColumn(db, tableName, columnName, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  if (columns.some((column) => column.name === columnName)) return;
+
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+}
+
 export function migrate(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS content_items (
@@ -32,6 +39,8 @@ export function migrate(db) {
       review_requested_at TEXT,
       review_decision_at TEXT,
       rejection_reason TEXT NOT NULL DEFAULT '',
+      notion_page_id TEXT NOT NULL DEFAULT '',
+      notion_synced_at TEXT,
       attempt_count INTEGER NOT NULL DEFAULT 0,
       last_error TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
@@ -67,6 +76,9 @@ export function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_channel_outputs_status ON channel_outputs(status);
     CREATE INDEX IF NOT EXISTS idx_events_content_item_id ON events(content_item_id);
   `);
+
+  ensureColumn(db, 'content_items', 'notion_page_id', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'content_items', 'notion_synced_at', 'TEXT');
 }
 
 export function insertEvent(db, { contentItemId = null, eventType, payload = {} }) {
@@ -132,6 +144,17 @@ export function listContentItemsByStatus(db, status, { limit = 10 } = {}) {
     ORDER BY created_at ASC
     LIMIT ?
   `).all(status, limit);
+}
+
+export function listContentItemsForNotionSync(db, { limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT *
+    FROM content_items
+    ORDER BY
+      CASE WHEN notion_page_id = '' THEN 0 ELSE 1 END,
+      updated_at DESC
+    LIMIT ?
+  `).all(limit);
 }
 
 export function updateContentDraft(db, { id, draftTitle, draftBody, status, eventType, payload = {} }) {
@@ -363,6 +386,29 @@ export function updateContentStatus(db, { id, status, eventType, payload = {} })
     contentItemId: id,
     eventType,
     payload: { ...payload, status }
+  });
+
+  return getContentItem(db, id);
+}
+
+export function updateContentNotionSync(db, { id, notionPageId, eventType, payload = {} }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE content_items
+    SET notion_page_id = ?,
+        notion_synced_at = ?
+    WHERE id = ?
+  `).run(notionPageId, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Content item not found: ${id}`);
+  }
+
+  insertEvent(db, {
+    contentItemId: id,
+    eventType,
+    payload: { ...payload, notionPageId }
   });
 
   return getContentItem(db, id);

@@ -220,3 +220,12 @@ export async function markChannelOutputUploaded(store, item, channelOutput, arti
     };
   });
 }
+
+export async function markContentNotionSynced(store, item, notionPageId, payload = {}) {
+  return store.updateContentNotionSync({
+    id: item.id,
+    notionPageId,
+    eventType: 'content.notion.synced',
+    payload
+  });
+}

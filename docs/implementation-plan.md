@@ -47,8 +47,9 @@
 - `instagram upload`: 로컬 렌더 산출물을 Supabase Storage public bucket에 업로드하고 공개 manifest URL을 기록
 - `instagram publish`: 공개 이미지 URL이 준비된 카드뉴스를 Instagram Graph API로 게시하고 `published`로 전환
 - `instagram publish --mock`: Meta API 호출 없이 게시 상태 전이를 검증
+- `notion sync`: Supabase/SQLite 콘텐츠 상태를 Notion 읽기용 미러에 생성/업데이트
 
-다음 구현 단계는 실제 계정으로 `render -> upload -> publish` E2E를 검증하거나 9단계 Notion 기록 미러입니다.
+다음 구현 단계는 실제 계정으로 `render -> upload -> publish` E2E를 검증하거나 간단한 상태 페이지입니다.
 
 ## 운영 DB 기준
 

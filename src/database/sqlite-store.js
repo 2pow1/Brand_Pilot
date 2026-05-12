@@ -6,12 +6,14 @@ import {
   insertContentItem,
   listChannelOutputsReadyToRender,
   listChannelOutputsReadyToPublish,
+  listContentItemsForNotionSync,
   listContentItemsByStatus,
   migrate,
   openDatabase,
   summarize,
   updateChannelOutputArtifact,
   updateChannelOutputPublished,
+  updateContentNotionSync,
   updateContentDraft,
   updateContentStatus,
   updateReviewDecision,
@@ -62,6 +64,10 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
       return listContentItemsByStatus(db, status, options);
     },
 
+    async listContentItemsForNotionSync(options) {
+      return listContentItemsForNotionSync(db, options);
+    },
+
     async updateContentDraft(input) {
       return updateContentDraft(db, input);
     },
@@ -76,6 +82,10 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
 
     async updateContentStatus(input) {
       return updateContentStatus(db, input);
+    },
+
+    async updateContentNotionSync(input) {
+      return updateContentNotionSync(db, input);
     },
 
     async upsertChannelOutput(input) {
