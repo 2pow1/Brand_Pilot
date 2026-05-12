@@ -17,6 +17,7 @@ Usage:
   node src/cli.js review request [--mock] [--limit <n>]
   node src/cli.js review approve <content-id>
   node src/cli.js review reject <content-id> [reason]
+  node src/cli.js channel generate [--limit <n>]
   node src/cli.js transitions
 `);
 }
@@ -298,6 +299,72 @@ async function runReview(argv) {
   }
 }
 
+async function runChannelGenerate(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const brand = loadBrandConfig(config.cwd);
+  const channels = loadJsonConfig(resolve(config.cwd, 'config/channels.json'));
+  const { generateChannelOutputs } = await import('./channel/index.js');
+  const { saveChannelOutputsForContent } = await import('./repository.js');
+  const { db, databasePath, dbApi } = await openAppDatabase();
+  const items = dbApi.listContentItemsByStatus(db, CONTENT_STATUSES.APPROVED, {
+    limit: options.limit
+  });
+  const generated = [];
+  const failed = [];
+
+  for (const item of items) {
+    try {
+      const outputs = generateChannelOutputs({
+        brand,
+        item,
+        channels
+      });
+
+      const saved = saveChannelOutputsForContent(db, item, outputs, {
+        mode: 'template',
+        channelIds: outputs.map((output) => output.channelId)
+      });
+
+      generated.push({
+        id: saved.item.id,
+        sourceTitle: saved.item.source_title,
+        status: saved.item.status,
+        channels: saved.outputs.map((output) => ({
+          channelId: output.channel_id,
+          status: output.status
+        }))
+      });
+    } catch (error) {
+      failed.push({
+        id: item.id,
+        sourceTitle: item.source_title,
+        error: error.message
+      });
+    }
+  }
+
+  console.log(`Database: ${databasePath}`);
+  console.log(JSON.stringify({
+    generatedCount: generated.length,
+    failedCount: failed.length,
+    generated,
+    failed,
+    summary: dbApi.summarize(db)
+  }, null, 2));
+  db.close();
+}
+
+async function runChannel(argv) {
+  const action = argv[0];
+
+  if (action === 'generate') {
+    await runChannelGenerate(argv.slice(1));
+  } else {
+    throw new Error('channel command must be: generate');
+  }
+}
+
 function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
@@ -312,6 +379,7 @@ async function main() {
   else if (command === 'collect') await runCollect(args);
   else if (command === 'draft') await runDraft(args);
   else if (command === 'review') await runReview(args);
+  else if (command === 'channel') await runChannel(args);
   else if (command === 'transitions') runTransitions();
   else {
     printUsage();

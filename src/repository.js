@@ -1,6 +1,7 @@
 import {
   getContentItemByFingerprint,
   insertContentItem,
+  upsertChannelOutput,
   updateContentDraft,
   updateReviewDecision,
   updateReviewRequest,
@@ -105,4 +106,45 @@ export function rejectContent(db, item, reason = '', payload = {}) {
     eventType: 'content.review.rejected',
     payload
   });
+}
+
+export function saveChannelOutputsForContent(db, item, outputs, payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.CHANNEL_GENERATED);
+
+  db.exec('BEGIN');
+  try {
+    const savedOutputs = outputs.map((output) =>
+      upsertChannelOutput(db, {
+        contentItemId: item.id,
+        channelId: output.channelId,
+        payload: output.payload,
+        eventType: 'content.channel.generated',
+        eventPayload: {
+          ...payload,
+          channelId: output.channelId,
+          template: output.payload.template
+        }
+      })
+    );
+
+    const updated = updateContentStatus(db, {
+      id: item.id,
+      status: CONTENT_STATUSES.CHANNEL_GENERATED,
+      eventType: `content.transition.${item.status}.${CONTENT_STATUSES.CHANNEL_GENERATED}`,
+      payload: {
+        ...payload,
+        channelIds: outputs.map((output) => output.channelId)
+      }
+    });
+
+    db.exec('COMMIT');
+
+    return {
+      item: updated,
+      outputs: savedOutputs
+    };
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
 }

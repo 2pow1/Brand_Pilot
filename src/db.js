@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createId } from './ids.js';
 import { buildPipelineProgress } from './progress.js';
 import { CONTENT_STATUSES } from './state.js';
+import { CHANNEL_STATUSES } from './state.js';
 import { nowIso } from './time.js';
 
 export function openDatabase(path) {
@@ -210,6 +211,62 @@ export function updateReviewDecision(db, { id, status, rejectionReason = '', eve
   });
 
   return getContentItem(db, id);
+}
+
+export function upsertChannelOutput(
+  db,
+  {
+    contentItemId,
+    channelId,
+    status = CHANNEL_STATUSES.GENERATED,
+    payload,
+    artifactPath = '',
+    publishedUrl = '',
+    eventType,
+    eventPayload = {}
+  }
+) {
+  const id = createId('channel');
+  const now = nowIso();
+  const payloadJson = JSON.stringify(payload);
+
+  db.prepare(`
+    INSERT INTO channel_outputs (
+      id,
+      content_item_id,
+      channel_id,
+      status,
+      payload_json,
+      artifact_path,
+      published_url,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(content_item_id, channel_id) DO UPDATE SET
+      status = excluded.status,
+      payload_json = excluded.payload_json,
+      artifact_path = excluded.artifact_path,
+      published_url = excluded.published_url,
+      updated_at = excluded.updated_at,
+      last_error = ''
+  `).run(id, contentItemId, channelId, status, payloadJson, artifactPath, publishedUrl, now, now);
+
+  insertEvent(db, {
+    contentItemId,
+    eventType,
+    payload: {
+      ...eventPayload,
+      channelId,
+      status
+    }
+  });
+
+  return db.prepare(`
+    SELECT *
+    FROM channel_outputs
+    WHERE content_item_id = ? AND channel_id = ?
+  `).get(contentItemId, channelId);
 }
 
 export function updateContentStatus(db, { id, status, eventType, payload = {} }) {

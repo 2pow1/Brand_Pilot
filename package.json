@@ -11,6 +11,7 @@
     "collect": "node --no-warnings=ExperimentalWarning src/cli.js collect",
     "draft": "node --no-warnings=ExperimentalWarning src/cli.js draft",
     "review": "node --no-warnings=ExperimentalWarning src/cli.js review",
+    "channel": "node --no-warnings=ExperimentalWarning src/cli.js channel",
     "test": "node --no-warnings=ExperimentalWarning --test"
   },
   "engines": {

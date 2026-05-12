@@ -55,6 +55,7 @@ node --no-warnings=ExperimentalWarning src/cli.js draft --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js review request --mock --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js review approve <content-id>
 node --no-warnings=ExperimentalWarning src/cli.js review reject <content-id>
+node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 1
 node --no-warnings=ExperimentalWarning --test
 ```
 
@@ -65,3 +66,7 @@ node --no-warnings=ExperimentalWarning --test
 `status`는 `progress.currentStep`, `activeSteps`, `nextCommands`를 함께 보여줍니다. 검수 대기 중인 콘텐츠가 있어도 다음 후보 수집과 초안 생성을 병렬로 진행할 수 있습니다.
 
 `review request --mock`은 Discord 토큰 없이 검수 요청 흐름을 확인합니다. 실제 Discord 전송은 `.env`의 `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID`, `DISCORD_BASE_URL`을 사용합니다. 메시지에는 승인/거절 버튼용 `custom_id`가 포함되며, 인터랙션 수신 서버가 붙기 전까지는 `review approve <content-id>` 또는 `review reject <content-id>`로 수동 결정을 기록할 수 있습니다.
+
+`channel generate`는 승인된 공통 초안을 채널별 payload로 변환합니다. 현재 활성 채널은 Instagram이며, 1080x1080 카드뉴스 5장 구조, caption, hashtags, CTA, QR target URL을 `channel_outputs`에 저장합니다.
+
+전체 구현 단계는 `docs/implementation-plan.md`에 정리되어 있습니다.
