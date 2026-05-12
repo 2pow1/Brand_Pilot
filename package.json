@@ -8,6 +8,7 @@
     "init": "node --no-warnings=ExperimentalWarning src/cli.js init",
     "status": "node --no-warnings=ExperimentalWarning src/cli.js status",
     "sample": "node --no-warnings=ExperimentalWarning src/cli.js sample",
+    "collect": "node --no-warnings=ExperimentalWarning src/cli.js collect",
     "test": "node --no-warnings=ExperimentalWarning --test"
   },
   "engines": {

@@ -119,6 +119,10 @@ export function getContentItem(db, id) {
   return db.prepare('SELECT * FROM content_items WHERE id = ?').get(id) || null;
 }
 
+export function getContentItemByFingerprint(db, sourceFingerprint) {
+  return db.prepare('SELECT * FROM content_items WHERE source_fingerprint = ?').get(sourceFingerprint) || null;
+}
+
 export function updateContentStatus(db, { id, status, eventType, payload = {} }) {
   const updatedAt = nowIso();
 
