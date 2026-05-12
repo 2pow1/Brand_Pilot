@@ -45,13 +45,13 @@
 - `channel generate`: 승인된 초안을 Instagram 카드뉴스 payload로 변환하고 `channel_generated`로 전환
 - `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`으로 전환
 
-다음 구현 단계는 Supabase 운영 DB 전환 준비를 마친 뒤, 8단계 Instagram 실제 게시 또는 9단계 Notion 기록 미러입니다.
+다음 구현 단계는 8단계 Instagram 실제 게시 또는 9단계 Notion 기록 미러입니다.
 
 ## 운영 DB 기준
 
 운영 환경에서는 Supabase Postgres를 상태 저장소로 사용합니다.
 
-로컬 개발에서는 `DATABASE_PROVIDER=sqlite`로 SQLite를 계속 사용할 수 있습니다. 실제 배포에서는 `DATABASE_PROVIDER=supabase`와 Supabase URL/key를 사용하고, `supabase/schema.sql`을 적용한 Postgres 테이블을 source of truth로 둡니다.
+로컬 개발에서는 `DATABASE_PROVIDER=sqlite`로 SQLite를 계속 사용할 수 있습니다. 무료 우선 운영에서는 GitHub Actions schedule이 `DATABASE_PROVIDER=supabase`와 Supabase URL/key를 사용해 주기 job을 실행하고, `supabase/schema.sql`을 적용한 Postgres 테이블을 source of truth로 둡니다.
 
 ## 상태 전이 기준
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { migrate, openDatabase } from '../src/db.js';
+import { createSqliteStore } from '../src/database/sqlite-store.js';
 import {
   approveContent,
   createCollectedContent,
@@ -9,8 +10,8 @@ import {
   saveDraftForContent
 } from '../src/repository.js';
 
-function createDraftCreatedItem(db) {
-  const item = createCollectedContent(db, {
+async function createDraftCreatedItem(store) {
+  const item = await createCollectedContent(store, {
     sourceId: 'source-a',
     sourceName: 'Source A',
     sourceUrl: 'https://example.com/article',
@@ -18,7 +19,7 @@ function createDraftCreatedItem(db) {
     rawExcerpt: 'Short summary'
   });
 
-  return saveDraftForContent(db, item, {
+  return saveDraftForContent(store, item, {
     title: 'Draft title',
     body: 'Draft body',
     angle: 'Draft angle',
@@ -27,29 +28,31 @@ function createDraftCreatedItem(db) {
   });
 }
 
-test('requests review and approves pending content', () => {
+test('requests review and approves pending content', async () => {
   const db = openDatabase(':memory:');
   migrate(db);
-  const drafted = createDraftCreatedItem(db);
-  const pending = requestReviewForContent(db, drafted, 'message_1');
-  const approved = approveContent(db, pending);
+  const store = createSqliteStore(db);
+  const drafted = await createDraftCreatedItem(store);
+  const pending = await requestReviewForContent(store, drafted, 'message_1');
+  const approved = await approveContent(store, pending);
 
   assert.equal(pending.status, 'pending_review');
   assert.equal(pending.review_message_id, 'message_1');
   assert.equal(approved.status, 'approved');
 
-  db.close();
+  await store.close();
 });
 
-test('requests review and rejects pending content', () => {
+test('requests review and rejects pending content', async () => {
   const db = openDatabase(':memory:');
   migrate(db);
-  const drafted = createDraftCreatedItem(db);
-  const pending = requestReviewForContent(db, drafted, 'message_1');
-  const rejected = rejectContent(db, pending, 'not relevant');
+  const store = createSqliteStore(db);
+  const drafted = await createDraftCreatedItem(store);
+  const pending = await requestReviewForContent(store, drafted, 'message_1');
+  const rejected = await rejectContent(store, pending, 'not relevant');
 
   assert.equal(rejected.status, 'rejected');
   assert.equal(rejected.rejection_reason, 'not relevant');
 
-  db.close();
+  await store.close();
 });

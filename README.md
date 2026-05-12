@@ -40,11 +40,11 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 
 `.env.example`을 기준으로 로컬 `.env`를 생성합니다. 실제 API 키와 토큰은 GitHub에 커밋하지 않습니다.
 
-운영 환경의 상태 저장소는 Supabase Postgres를 기준으로 설계합니다. 로컬 CLI 검증은 `DATABASE_PROVIDER=sqlite`로 SQLite fallback을 사용하고, 운영 전환 시에는 `supabase/schema.sql`을 적용한 뒤 Supabase adapter를 붙입니다. 자세한 운영 DB 설계는 `docs/supabase-architecture.md`를 참고합니다.
+운영 환경의 상태 저장소는 Supabase Postgres를 기준으로 설계합니다. 로컬 CLI 검증은 `DATABASE_PROVIDER=sqlite`로 SQLite fallback을 사용하고, 무료 우선 운영은 GitHub Actions schedule이 `DATABASE_PROVIDER=supabase`로 CLI job을 실행합니다. 자세한 운영 DB 설계는 `docs/supabase-architecture.md`를 참고합니다.
 
 ## 로컬 실행
 
-현재 CLI 구현은 Node.js 24의 내장 SQLite adapter를 사용합니다.
+현재 CLI 구현은 Node.js 24에서 SQLite 또는 Supabase provider로 실행할 수 있습니다.
 
 ```powershell
 node --no-warnings=ExperimentalWarning src/cli.js init
@@ -75,3 +75,9 @@ node --no-warnings=ExperimentalWarning --test
 `instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 1080x1080 PNG 5장과 `manifest.json`을 생성합니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
 
 전체 구현 단계는 `docs/implementation-plan.md`에 정리되어 있습니다.
+
+## 무료 우선 운영
+
+`.github/workflows/brand-pilot-schedule.yml`은 6시간마다 GitHub Actions에서 수집, 초안 생성, Discord 검수 요청, 승인된 콘텐츠의 채널 payload 생성을 실행합니다.
+
+GitHub Secrets에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID`를 등록합니다. Discord 승인/거절 버튼 수신은 `supabase/functions/discord-review` Edge Function을 배포해 처리합니다.

@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { migrate, openDatabase } from '../src/db.js';
+import { createSqliteStore } from '../src/database/sqlite-store.js';
 import { createCollectedContent, saveDraftForContent } from '../src/repository.js';
 
-test('saves a draft and moves collected content to draft_created', () => {
+test('saves a draft and moves collected content to draft_created', async () => {
   const db = openDatabase(':memory:');
   migrate(db);
+  const store = createSqliteStore(db);
 
-  const item = createCollectedContent(db, {
+  const item = await createCollectedContent(store, {
     sourceId: 'source-a',
     sourceName: 'Source A',
     sourceUrl: 'https://example.com/article',
@@ -15,8 +17,8 @@ test('saves a draft and moves collected content to draft_created', () => {
     rawExcerpt: 'Short summary'
   });
 
-  const updated = saveDraftForContent(
-    db,
+  const updated = await saveDraftForContent(
+    store,
     item,
     {
       title: 'Draft title',
@@ -33,5 +35,5 @@ test('saves a draft and moves collected content to draft_created', () => {
   assert.equal(updated.draft_body, 'Draft body');
   assert.equal(db.prepare('SELECT COUNT(*) AS count FROM events').get().count, 2);
 
-  db.close();
+  await store.close();
 });

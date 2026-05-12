@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { migrate, openDatabase } from '../src/db.js';
+import { createSqliteStore } from '../src/database/sqlite-store.js';
 import {
   approveContent,
   createCollectedContent,
@@ -10,31 +11,32 @@ import {
   saveDraftForContent
 } from '../src/repository.js';
 
-function createApprovedItem(db) {
-  const item = createCollectedContent(db, {
+async function createApprovedItem(store) {
+  const item = await createCollectedContent(store, {
     sourceId: 'source-a',
     sourceName: 'Source A',
     sourceUrl: 'https://example.com/article',
     sourceTitle: 'A useful article about branding',
     rawExcerpt: 'Short summary'
   });
-  const drafted = saveDraftForContent(db, item, {
+  const drafted = await saveDraftForContent(store, item, {
     title: 'Draft title',
     body: 'Draft body',
     angle: 'Draft angle',
     keyPoints: ['one', 'two', 'three'],
     cta: 'Join'
   });
-  const pending = requestReviewForContent(db, drafted, 'message_1');
-  return approveContent(db, pending);
+  const pending = await requestReviewForContent(store, drafted, 'message_1');
+  return approveContent(store, pending);
 }
 
-test('stores channel output and moves approved content to channel_generated', () => {
+test('stores channel output and moves approved content to channel_generated', async () => {
   const db = openDatabase(':memory:');
   migrate(db);
+  const store = createSqliteStore(db);
 
-  const approved = createApprovedItem(db);
-  const result = saveChannelOutputsForContent(db, approved, [
+  const approved = await createApprovedItem(store);
+  const result = await saveChannelOutputsForContent(store, approved, [
     {
       channelId: 'instagram',
       payload: {
@@ -50,15 +52,16 @@ test('stores channel output and moves approved content to channel_generated', ()
   assert.equal(JSON.parse(result.outputs[0].payload_json).template, 'instagram-card-news-v1');
   assert.equal(db.prepare('SELECT COUNT(*) AS count FROM channel_outputs').get().count, 1);
 
-  db.close();
+  await store.close();
 });
 
-test('marks rendered channel output as publish pending', () => {
+test('marks rendered channel output as publish pending', async () => {
   const db = openDatabase(':memory:');
   migrate(db);
+  const store = createSqliteStore(db);
 
-  const approved = createApprovedItem(db);
-  const generated = saveChannelOutputsForContent(db, approved, [
+  const approved = await createApprovedItem(store);
+  const generated = await saveChannelOutputsForContent(store, approved, [
     {
       channelId: 'instagram',
       payload: {
@@ -68,8 +71,8 @@ test('marks rendered channel output as publish pending', () => {
     }
   ]);
   const output = generated.outputs[0];
-  const rendered = markChannelOutputRendered(
-    db,
+  const rendered = await markChannelOutputRendered(
+    store,
     generated.item,
     {
       channel_output_id: output.id,
@@ -82,5 +85,5 @@ test('marks rendered channel output as publish pending', () => {
   assert.equal(rendered.output.status, 'publish_pending');
   assert.equal(rendered.output.artifact_path, 'artifacts/generated/instagram/content_123');
 
-  db.close();
+  await store.close();
 });

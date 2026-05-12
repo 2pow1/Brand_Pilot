@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { openDatabase, migrate } from '../src/db.js';
+import { createSqliteStore } from '../src/database/sqlite-store.js';
 import { createCollectedContentIfNew } from '../src/repository.js';
 
-test('does not insert duplicate collected candidates', () => {
+test('does not insert duplicate collected candidates', async () => {
   const db = openDatabase(':memory:');
   migrate(db);
+  const store = createSqliteStore(db);
 
   const candidate = {
     sourceId: 'source-a',
@@ -15,13 +17,13 @@ test('does not insert duplicate collected candidates', () => {
     rawExcerpt: 'Short summary'
   };
 
-  const first = createCollectedContentIfNew(db, candidate);
-  const second = createCollectedContentIfNew(db, candidate);
+  const first = await createCollectedContentIfNew(store, candidate);
+  const second = await createCollectedContentIfNew(store, candidate);
 
   assert.equal(first.created, true);
   assert.equal(second.created, false);
   assert.equal(first.item.id, second.item.id);
   assert.equal(db.prepare('SELECT COUNT(*) AS count FROM content_items').get().count, 1);
 
-  db.close();
+  await store.close();
 });

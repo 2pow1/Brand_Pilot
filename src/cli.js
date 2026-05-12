@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { resolve } from 'node:path';
-import { databasePathFromUrl, loadBrandConfig, loadConfig, loadJsonConfig } from './config.js';
-import { assertSqliteCliRuntime, describeDatabaseProvider } from './database/provider.js';
+import { loadBrandConfig, loadConfig, loadJsonConfig } from './config.js';
+import { openDatabaseStore } from './database/index.js';
 import { fingerprint } from './ids.js';
 import { CONTENT_STATUSES, contentTransitions } from './state.js';
 
@@ -54,39 +54,36 @@ function parseOptions(argv) {
 }
 
 async function openAppDatabase() {
-  const dbApi = await import('./db.js');
   const config = loadConfig();
-  assertSqliteCliRuntime(config);
-  const databasePath = databasePathFromUrl(config.databaseUrl, config.cwd);
-  const db = dbApi.openDatabase(databasePath);
-  dbApi.migrate(db);
-  return { db, databasePath, dbApi, config };
+  const store = await openDatabaseStore(config);
+  return { store, config };
 }
 
 function printSummary(summary) {
   console.log(JSON.stringify(summary, null, 2));
 }
 
+function printDatabaseInfo(store) {
+  console.log(`Database provider: ${store.label}`);
+  console.log(`Database: ${store.location}`);
+}
+
 async function runInit() {
-  const { db, databasePath, config } = await openAppDatabase();
-  const provider = describeDatabaseProvider(config);
-  db.close();
-  console.log(`Database provider: ${provider.label}`);
-  console.log(`Initialized database: ${databasePath}`);
+  const { store } = await openAppDatabase();
+  printDatabaseInfo(store);
+  await store.close();
 }
 
 async function runStatus() {
-  const { db, databasePath, dbApi, config } = await openAppDatabase();
-  const provider = describeDatabaseProvider(config);
-  console.log(`Database provider: ${provider.label}`);
-  console.log(`Database: ${databasePath}`);
-  printSummary(dbApi.summarize(db));
-  db.close();
+  const { store } = await openAppDatabase();
+  printDatabaseInfo(store);
+  printSummary(await store.summarize());
+  await store.close();
 }
 
 async function runSample() {
   const { createCollectedContent, transitionContent } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
+  const { store } = await openAppDatabase();
   const sources = loadJsonConfig(resolve(process.cwd(), 'config/sources.json'));
   const firstSource = sources.find((source) => source.enabled);
 
@@ -95,7 +92,7 @@ async function runSample() {
   }
 
   const sampleTitle = `Sample branding insight for MVP wiring ${new Date().toISOString()}`;
-  const item = createCollectedContent(db, {
+  const item = await createCollectedContent(store, {
     sourceId: firstSource.id,
     sourceName: firstSource.name,
     sourceUrl: firstSource.url,
@@ -103,15 +100,15 @@ async function runSample() {
     rawExcerpt: 'This sample row verifies local database setup and state transitions.'
   });
 
-  const drafted = transitionContent(db, item, CONTENT_STATUSES.DRAFT_CREATED, {
+  const drafted = await transitionContent(store, item, CONTENT_STATUSES.DRAFT_CREATED, {
     draftFingerprint: fingerprint(sampleTitle)
   });
-  const pending = transitionContent(db, drafted, CONTENT_STATUSES.PENDING_REVIEW);
+  const pending = await transitionContent(store, drafted, CONTENT_STATUSES.PENDING_REVIEW);
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(`Created sample content item: ${pending.id}`);
-  printSummary(dbApi.summarize(db));
-  db.close();
+  printSummary(await store.summarize());
+  await store.close();
 }
 
 async function runCollect(argv) {
@@ -128,13 +125,13 @@ async function runCollect(argv) {
   }
 
   const { createCollectedContentIfNew } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
+  const { store } = await openAppDatabase();
   const stored = [];
   const skipped = [];
 
   for (const result of collection.results) {
     for (const candidate of result.candidates) {
-      const { item, created } = createCollectedContentIfNew(db, candidate);
+      const { item, created } = await createCollectedContentIfNew(store, candidate);
       const bucket = created ? stored : skipped;
       bucket.push({
         id: item.id,
@@ -145,7 +142,7 @@ async function runCollect(argv) {
     }
   }
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(JSON.stringify({
     fetchedSources: collection.results.length,
     failedSources: collection.errors,
@@ -153,9 +150,9 @@ async function runCollect(argv) {
     skippedDuplicateCount: skipped.length,
     stored,
     skipped,
-    summary: dbApi.summarize(db)
+    summary: await store.summarize()
   }, null, 2));
-  db.close();
+  await store.close();
 }
 
 async function runDraft(argv) {
@@ -164,8 +161,8 @@ async function runDraft(argv) {
   const brand = loadBrandConfig(config.cwd);
   const { createDraft } = await import('./draft/index.js');
   const { saveDraftForContent } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
-  const items = dbApi.listContentItemsByStatus(db, CONTENT_STATUSES.COLLECTED, {
+  const { store } = await openAppDatabase();
+  const items = await store.listContentItemsByStatus(CONTENT_STATUSES.COLLECTED, {
     limit: options.limit
   });
   const drafted = [];
@@ -179,7 +176,7 @@ async function runDraft(argv) {
         item,
         mock: options.mock
       });
-      const updated = saveDraftForContent(db, item, draft, {
+      const updated = await saveDraftForContent(store, item, draft, {
         mode: options.mock ? 'mock' : 'openai',
         model: options.mock ? 'mock' : config.openaiModel
       });
@@ -199,16 +196,16 @@ async function runDraft(argv) {
     }
   }
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(JSON.stringify({
     mode: options.mock ? 'mock' : 'openai',
     draftedCount: drafted.length,
     failedCount: failed.length,
     drafted,
     failed,
-    summary: dbApi.summarize(db)
+    summary: await store.summarize()
   }, null, 2));
-  db.close();
+  await store.close();
 }
 
 async function runReviewRequest(argv) {
@@ -216,8 +213,8 @@ async function runReviewRequest(argv) {
   const config = loadConfig();
   const { createReviewRequest } = await import('./review/index.js');
   const { requestReviewForContent } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
-  const items = dbApi.listContentItemsByStatus(db, CONTENT_STATUSES.DRAFT_CREATED, {
+  const { store } = await openAppDatabase();
+  const items = await store.listContentItemsByStatus(CONTENT_STATUSES.DRAFT_CREATED, {
     limit: options.limit
   });
   const requested = [];
@@ -230,7 +227,7 @@ async function runReviewRequest(argv) {
         item,
         mock: options.mock
       });
-      const updated = requestReviewForContent(db, item, review.messageId, {
+      const updated = await requestReviewForContent(store, item, review.messageId, {
         mode: options.mock ? 'mock' : 'discord',
         channelId: review.channelId,
         url: review.url
@@ -252,16 +249,16 @@ async function runReviewRequest(argv) {
     }
   }
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(JSON.stringify({
     mode: options.mock ? 'mock' : 'discord',
     requestedCount: requested.length,
     failedCount: failed.length,
     requested,
     failed,
-    summary: dbApi.summarize(db)
+    summary: await store.summarize()
   }, null, 2));
-  db.close();
+  await store.close();
 }
 
 async function runReviewDecision(action, argv) {
@@ -271,8 +268,8 @@ async function runReviewDecision(action, argv) {
   }
 
   const { approveContent, rejectContent } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
-  const item = dbApi.getContentItem(db, contentId);
+  const { store } = await openAppDatabase();
+  const item = await store.getContentItem(contentId);
 
   if (!item) {
     throw new Error(`Content item not found: ${contentId}`);
@@ -280,18 +277,18 @@ async function runReviewDecision(action, argv) {
 
   const updated =
     action === 'approve'
-      ? approveContent(db, item, { mode: 'manual-cli' })
-      : rejectContent(db, item, argv.slice(1).join(' ') || 'rejected', { mode: 'manual-cli' });
+      ? await approveContent(store, item, { mode: 'manual-cli' })
+      : await rejectContent(store, item, argv.slice(1).join(' ') || 'rejected', { mode: 'manual-cli' });
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(JSON.stringify({
     id: updated.id,
     sourceTitle: updated.source_title,
     draftTitle: updated.draft_title,
     status: updated.status,
-    summary: dbApi.summarize(db)
+    summary: await store.summarize()
   }, null, 2));
-  db.close();
+  await store.close();
 }
 
 async function runReview(argv) {
@@ -313,8 +310,8 @@ async function runChannelGenerate(argv) {
   const channels = loadJsonConfig(resolve(config.cwd, 'config/channels.json'));
   const { generateChannelOutputs } = await import('./channel/index.js');
   const { saveChannelOutputsForContent } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
-  const items = dbApi.listContentItemsByStatus(db, CONTENT_STATUSES.APPROVED, {
+  const { store } = await openAppDatabase();
+  const items = await store.listContentItemsByStatus(CONTENT_STATUSES.APPROVED, {
     limit: options.limit
   });
   const generated = [];
@@ -328,7 +325,7 @@ async function runChannelGenerate(argv) {
         channels
       });
 
-      const saved = saveChannelOutputsForContent(db, item, outputs, {
+      const saved = await saveChannelOutputsForContent(store, item, outputs, {
         mode: 'template',
         channelIds: outputs.map((output) => output.channelId)
       });
@@ -351,15 +348,15 @@ async function runChannelGenerate(argv) {
     }
   }
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(JSON.stringify({
     generatedCount: generated.length,
     failedCount: failed.length,
     generated,
     failed,
-    summary: dbApi.summarize(db)
+    summary: await store.summarize()
   }, null, 2));
-  db.close();
+  await store.close();
 }
 
 async function runChannel(argv) {
@@ -377,8 +374,8 @@ async function runInstagramRender(argv) {
   const config = loadConfig();
   const { renderInstagramCardNews } = await import('./render/instagram.js');
   const { markChannelOutputRendered } = await import('./repository.js');
-  const { db, databasePath, dbApi } = await openAppDatabase();
-  const rows = dbApi.listChannelOutputsReadyToRender(db, {
+  const { store } = await openAppDatabase();
+  const rows = await store.listChannelOutputsReadyToRender({
     channelId: 'instagram',
     limit: options.limit
   });
@@ -393,7 +390,7 @@ async function runInstagramRender(argv) {
         contentItemId: row.id,
         payload
       });
-      const saved = markChannelOutputRendered(db, row, row, result.outputDir, {
+      const saved = await markChannelOutputRendered(store, row, row, result.outputDir, {
         mode: 'powershell-system-drawing',
         slideCount: result.slides.length,
         manifestPath: result.manifestPath
@@ -417,15 +414,15 @@ async function runInstagramRender(argv) {
     }
   }
 
-  console.log(`Database: ${databasePath}`);
+  printDatabaseInfo(store);
   console.log(JSON.stringify({
     renderedCount: rendered.length,
     failedCount: failed.length,
     rendered,
     failed,
-    summary: dbApi.summarize(db)
+    summary: await store.summarize()
   }, null, 2));
-  db.close();
+  await store.close();
 }
 
 async function runInstagram(argv) {

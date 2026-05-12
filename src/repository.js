@@ -1,13 +1,3 @@
-import {
-  getContentItemByFingerprint,
-  insertContentItem,
-  updateChannelOutputArtifact,
-  upsertChannelOutput,
-  updateContentDraft,
-  updateReviewDecision,
-  updateReviewRequest,
-  updateContentStatus
-} from './db.js';
 import { fingerprint } from './ids.js';
 import { assertContentTransition, CHANNEL_STATUSES, CONTENT_STATUSES } from './state.js';
 
@@ -15,9 +5,9 @@ export function sourceFingerprintFor(source) {
   return fingerprint(`${source.sourceId}:${source.sourceUrl}:${source.sourceTitle}`);
 }
 
-export function createCollectedContent(db, source) {
+export async function createCollectedContent(store, source) {
   const sourceFingerprint = sourceFingerprintFor(source);
-  return insertContentItem(db, {
+  return store.insertContentItem({
     sourceId: source.sourceId,
     sourceName: source.sourceName,
     sourceUrl: source.sourceUrl,
@@ -28,9 +18,9 @@ export function createCollectedContent(db, source) {
   });
 }
 
-export function createCollectedContentIfNew(db, source) {
+export async function createCollectedContentIfNew(store, source) {
   const sourceFingerprint = sourceFingerprintFor(source);
-  const existing = getContentItemByFingerprint(db, sourceFingerprint);
+  const existing = await store.getContentItemByFingerprint(sourceFingerprint);
 
   if (existing) {
     return {
@@ -40,15 +30,15 @@ export function createCollectedContentIfNew(db, source) {
   }
 
   return {
-    item: createCollectedContent(db, source),
+    item: await createCollectedContent(store, source),
     created: true
   };
 }
 
-export function transitionContent(db, item, toStatus, payload = {}) {
+export async function transitionContent(store, item, toStatus, payload = {}) {
   assertContentTransition(item.status, toStatus);
 
-  return updateContentStatus(db, {
+  return store.updateContentStatus({
     id: item.id,
     status: toStatus,
     eventType: `content.transition.${item.status}.${toStatus}`,
@@ -56,10 +46,10 @@ export function transitionContent(db, item, toStatus, payload = {}) {
   });
 }
 
-export function saveDraftForContent(db, item, draft, payload = {}) {
+export async function saveDraftForContent(store, item, draft, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.DRAFT_CREATED);
 
-  return updateContentDraft(db, {
+  return store.updateContentDraft({
     id: item.id,
     draftTitle: draft.title,
     draftBody: draft.body,
@@ -74,10 +64,10 @@ export function saveDraftForContent(db, item, draft, payload = {}) {
   });
 }
 
-export function requestReviewForContent(db, item, reviewMessageId, payload = {}) {
+export async function requestReviewForContent(store, item, reviewMessageId, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.PENDING_REVIEW);
 
-  return updateReviewRequest(db, {
+  return store.updateReviewRequest({
     id: item.id,
     reviewMessageId,
     status: CONTENT_STATUSES.PENDING_REVIEW,
@@ -86,10 +76,10 @@ export function requestReviewForContent(db, item, reviewMessageId, payload = {})
   });
 }
 
-export function approveContent(db, item, payload = {}) {
+export async function approveContent(store, item, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.APPROVED);
 
-  return updateReviewDecision(db, {
+  return store.updateReviewDecision({
     id: item.id,
     status: CONTENT_STATUSES.APPROVED,
     eventType: 'content.review.approved',
@@ -97,10 +87,10 @@ export function approveContent(db, item, payload = {}) {
   });
 }
 
-export function rejectContent(db, item, reason = '', payload = {}) {
+export async function rejectContent(store, item, reason = '', payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.REJECTED);
 
-  return updateReviewDecision(db, {
+  return store.updateReviewDecision({
     id: item.id,
     status: CONTENT_STATUSES.REJECTED,
     rejectionReason: reason,
@@ -109,13 +99,14 @@ export function rejectContent(db, item, reason = '', payload = {}) {
   });
 }
 
-export function saveChannelOutputsForContent(db, item, outputs, payload = {}) {
+export async function saveChannelOutputsForContent(store, item, outputs, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.CHANNEL_GENERATED);
 
-  db.exec('BEGIN');
-  try {
-    const savedOutputs = outputs.map((output) =>
-      upsertChannelOutput(db, {
+  return store.withTransaction(async () => {
+    const savedOutputs = [];
+
+    for (const output of outputs) {
+      savedOutputs.push(await store.upsertChannelOutput({
         contentItemId: item.id,
         channelId: output.channelId,
         payload: output.payload,
@@ -125,10 +116,10 @@ export function saveChannelOutputsForContent(db, item, outputs, payload = {}) {
           channelId: output.channelId,
           template: output.payload.template
         }
-      })
-    );
+      }));
+    }
 
-    const updated = updateContentStatus(db, {
+    const updated = await store.updateContentStatus({
       id: item.id,
       status: CONTENT_STATUSES.CHANNEL_GENERATED,
       eventType: `content.transition.${item.status}.${CONTENT_STATUSES.CHANNEL_GENERATED}`,
@@ -138,30 +129,24 @@ export function saveChannelOutputsForContent(db, item, outputs, payload = {}) {
       }
     });
 
-    db.exec('COMMIT');
-
     return {
       item: updated,
       outputs: savedOutputs
     };
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+  });
 }
 
-export function markChannelOutputRendered(db, item, channelOutput, artifactPath, payload = {}) {
+export async function markChannelOutputRendered(store, item, channelOutput, artifactPath, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.PUBLISH_PENDING);
 
-  db.exec('BEGIN');
-  try {
-    const output = updateChannelOutputArtifact(db, {
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputArtifact({
       id: channelOutput.channel_output_id || channelOutput.id,
       status: CHANNEL_STATUSES.PUBLISH_PENDING,
       artifactPath
     });
 
-    const updated = updateContentStatus(db, {
+    const updated = await store.updateContentStatus({
       id: item.id,
       status: CONTENT_STATUSES.PUBLISH_PENDING,
       eventType: `content.transition.${item.status}.${CONTENT_STATUSES.PUBLISH_PENDING}`,
@@ -172,14 +157,9 @@ export function markChannelOutputRendered(db, item, channelOutput, artifactPath,
       }
     });
 
-    db.exec('COMMIT');
-
     return {
       item: updated,
       output
     };
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+  });
 }

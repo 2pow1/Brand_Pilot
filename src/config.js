@@ -62,6 +62,7 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     discordBotToken: merged.DISCORD_BOT_TOKEN || '',
     discordReviewChannelId: merged.DISCORD_REVIEW_CHANNEL_ID || '',
     discordBaseUrl: merged.DISCORD_BASE_URL || DEFAULT_DISCORD_BASE_URL,
+    discordPublicKey: merged.DISCORD_PUBLIC_KEY || '',
     notionToken: merged.NOTION_TOKEN || '',
     notionDatabaseId: merged.NOTION_DATABASE_ID || '',
     metaAccessToken: merged.META_ACCESS_TOKEN || '',
