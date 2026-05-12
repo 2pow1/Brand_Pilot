@@ -123,6 +123,42 @@ export function getContentItemByFingerprint(db, sourceFingerprint) {
   return db.prepare('SELECT * FROM content_items WHERE source_fingerprint = ?').get(sourceFingerprint) || null;
 }
 
+export function listContentItemsByStatus(db, status, { limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT *
+    FROM content_items
+    WHERE status = ?
+    ORDER BY created_at ASC
+    LIMIT ?
+  `).all(status, limit);
+}
+
+export function updateContentDraft(db, { id, draftTitle, draftBody, status, eventType, payload = {} }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE content_items
+    SET draft_title = ?,
+        draft_body = ?,
+        status = ?,
+        updated_at = ?,
+        last_error = ''
+    WHERE id = ?
+  `).run(draftTitle, draftBody, status, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Content item not found: ${id}`);
+  }
+
+  insertEvent(db, {
+    contentItemId: id,
+    eventType,
+    payload: { ...payload, status }
+  });
+
+  return getContentItem(db, id);
+}
+
 export function updateContentStatus(db, { id, status, eventType, payload = {} }) {
   const updatedAt = nowIso();
 

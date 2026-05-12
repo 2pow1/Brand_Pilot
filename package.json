@@ -9,6 +9,7 @@
     "status": "node --no-warnings=ExperimentalWarning src/cli.js status",
     "sample": "node --no-warnings=ExperimentalWarning src/cli.js sample",
     "collect": "node --no-warnings=ExperimentalWarning src/cli.js collect",
+    "draft": "node --no-warnings=ExperimentalWarning src/cli.js draft",
     "test": "node --no-warnings=ExperimentalWarning --test"
   },
   "engines": {

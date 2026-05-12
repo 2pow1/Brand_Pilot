@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const DEFAULT_DATABASE_URL = 'file:./data/brand-pilot.sqlite';
+const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
+const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 
 function parseDotEnv(content) {
   const values = {};
@@ -45,6 +47,8 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     cwd,
     databaseUrl,
     openaiApiKey: merged.OPENAI_API_KEY || '',
+    openaiModel: merged.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
+    openaiBaseUrl: merged.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL,
     discordBotToken: merged.DISCORD_BOT_TOKEN || '',
     discordReviewChannelId: merged.DISCORD_REVIEW_CHANNEL_ID || '',
     notionToken: merged.NOTION_TOKEN || '',
@@ -56,6 +60,12 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
 
 export function loadJsonConfig(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+export function loadBrandConfig(cwd = process.cwd()) {
+  const brandPath = resolve(cwd, 'config/brand.json');
+  const examplePath = resolve(cwd, 'config/brand.example.json');
+  return loadJsonConfig(existsSync(brandPath) ? brandPath : examplePath);
 }
 
 export function databasePathFromUrl(databaseUrl, cwd = process.cwd()) {

@@ -50,7 +50,11 @@ node --no-warnings=ExperimentalWarning src/cli.js status
 node --no-warnings=ExperimentalWarning src/cli.js sample
 node --no-warnings=ExperimentalWarning src/cli.js collect --dry-run --limit 2
 node --no-warnings=ExperimentalWarning src/cli.js collect --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js draft --mock --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js draft --limit 1
 node --no-warnings=ExperimentalWarning --test
 ```
 
 `collect --dry-run`은 DB 저장 없이 후보만 확인합니다. `collect`는 `config/sources.json`의 활성 소스를 읽고, 후보 콘텐츠를 `collected` 상태로 SQLite에 저장합니다. 이미 저장된 후보는 URL과 제목 기반 fingerprint로 중복 처리합니다.
+
+`draft --mock`은 API 키 없이 검수용 초안 저장 흐름을 확인합니다. `draft`는 `.env`의 `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`을 사용해 OpenAI Responses API로 구조화된 초안을 생성하고, 성공한 항목을 `draft_created` 상태로 전환합니다.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { resolve } from 'node:path';
-import { databasePathFromUrl, loadConfig, loadJsonConfig } from './config.js';
+import { databasePathFromUrl, loadBrandConfig, loadConfig, loadJsonConfig } from './config.js';
 import { fingerprint } from './ids.js';
 import { CONTENT_STATUSES, contentTransitions } from './state.js';
 
@@ -13,6 +13,7 @@ Usage:
   node src/cli.js status
   node src/cli.js sample
   node src/cli.js collect [--dry-run] [--limit <n>]
+  node src/cli.js draft [--mock] [--limit <n>]
   node src/cli.js transitions
 `);
 }
@@ -20,6 +21,7 @@ Usage:
 function parseOptions(argv) {
   const options = {
     dryRun: false,
+    mock: false,
     limit: 10
   };
 
@@ -28,6 +30,8 @@ function parseOptions(argv) {
 
     if (arg === '--dry-run') {
       options.dryRun = true;
+    } else if (arg === '--mock') {
+      options.mock = true;
     } else if (arg === '--limit') {
       const value = Number(argv[index + 1]);
       if (!Number.isInteger(value) || value < 1) {
@@ -143,6 +147,59 @@ async function runCollect(argv) {
   db.close();
 }
 
+async function runDraft(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const brand = loadBrandConfig(config.cwd);
+  const { createDraft } = await import('./draft/index.js');
+  const { saveDraftForContent } = await import('./repository.js');
+  const { db, databasePath, dbApi } = await openAppDatabase();
+  const items = dbApi.listContentItemsByStatus(db, CONTENT_STATUSES.COLLECTED, {
+    limit: options.limit
+  });
+  const drafted = [];
+  const failed = [];
+
+  for (const item of items) {
+    try {
+      const draft = await createDraft({
+        config,
+        brand,
+        item,
+        mock: options.mock
+      });
+      const updated = saveDraftForContent(db, item, draft, {
+        mode: options.mock ? 'mock' : 'openai',
+        model: options.mock ? 'mock' : config.openaiModel
+      });
+
+      drafted.push({
+        id: updated.id,
+        sourceTitle: updated.source_title,
+        draftTitle: updated.draft_title,
+        status: updated.status
+      });
+    } catch (error) {
+      failed.push({
+        id: item.id,
+        sourceTitle: item.source_title,
+        error: error.message
+      });
+    }
+  }
+
+  console.log(`Database: ${databasePath}`);
+  console.log(JSON.stringify({
+    mode: options.mock ? 'mock' : 'openai',
+    draftedCount: drafted.length,
+    failedCount: failed.length,
+    drafted,
+    failed,
+    summary: dbApi.summarize(db)
+  }, null, 2));
+  db.close();
+}
+
 function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
@@ -155,6 +212,7 @@ async function main() {
   else if (command === 'status') await runStatus();
   else if (command === 'sample') await runSample();
   else if (command === 'collect') await runCollect(args);
+  else if (command === 'draft') await runDraft(args);
   else if (command === 'transitions') runTransitions();
   else {
     printUsage();

@@ -1,4 +1,9 @@
-import { getContentItemByFingerprint, insertContentItem, updateContentStatus } from './db.js';
+import {
+  getContentItemByFingerprint,
+  insertContentItem,
+  updateContentDraft,
+  updateContentStatus
+} from './db.js';
 import { fingerprint } from './ids.js';
 import { assertContentTransition, CONTENT_STATUSES } from './state.js';
 
@@ -44,5 +49,23 @@ export function transitionContent(db, item, toStatus, payload = {}) {
     status: toStatus,
     eventType: `content.transition.${item.status}.${toStatus}`,
     payload
+  });
+}
+
+export function saveDraftForContent(db, item, draft, payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.DRAFT_CREATED);
+
+  return updateContentDraft(db, {
+    id: item.id,
+    draftTitle: draft.title,
+    draftBody: draft.body,
+    status: CONTENT_STATUSES.DRAFT_CREATED,
+    eventType: 'content.draft.created',
+    payload: {
+      ...payload,
+      angle: draft.angle,
+      keyPoints: draft.keyPoints,
+      cta: draft.cta
+    }
   });
 }
