@@ -3,8 +3,7 @@ import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createId } from './ids.js';
 import { buildPipelineProgress } from './progress.js';
-import { CONTENT_STATUSES } from './state.js';
-import { CHANNEL_STATUSES } from './state.js';
+import { CHANNEL_STATUSES, CONTENT_STATUSES } from './state.js';
 import { nowIso } from './time.js';
 
 export function openDatabase(path) {
@@ -267,6 +266,45 @@ export function upsertChannelOutput(
     FROM channel_outputs
     WHERE content_item_id = ? AND channel_id = ?
   `).get(contentItemId, channelId);
+}
+
+export function listChannelOutputsReadyToRender(db, { channelId, limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT
+      c.*,
+      co.id AS channel_output_id,
+      co.channel_id AS output_channel_id,
+      co.status AS channel_status,
+      co.payload_json AS channel_payload_json,
+      co.artifact_path AS channel_artifact_path,
+      co.published_url AS channel_published_url
+    FROM channel_outputs co
+    JOIN content_items c ON c.id = co.content_item_id
+    WHERE co.channel_id = ?
+      AND co.status = ?
+      AND c.status = ?
+    ORDER BY co.created_at ASC
+    LIMIT ?
+  `).all(channelId, CHANNEL_STATUSES.GENERATED, CONTENT_STATUSES.CHANNEL_GENERATED, limit);
+}
+
+export function updateChannelOutputArtifact(db, { id, status, artifactPath }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE channel_outputs
+    SET status = ?,
+        artifact_path = ?,
+        updated_at = ?,
+        last_error = ''
+    WHERE id = ?
+  `).run(status, artifactPath, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Channel output not found: ${id}`);
+  }
+
+  return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
 }
 
 export function updateContentStatus(db, { id, status, eventType, payload = {} }) {

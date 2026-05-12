@@ -1,6 +1,7 @@
 import {
   getContentItemByFingerprint,
   insertContentItem,
+  updateChannelOutputArtifact,
   upsertChannelOutput,
   updateContentDraft,
   updateReviewDecision,
@@ -8,7 +9,7 @@ import {
   updateContentStatus
 } from './db.js';
 import { fingerprint } from './ids.js';
-import { assertContentTransition, CONTENT_STATUSES } from './state.js';
+import { assertContentTransition, CHANNEL_STATUSES, CONTENT_STATUSES } from './state.js';
 
 export function sourceFingerprintFor(source) {
   return fingerprint(`${source.sourceId}:${source.sourceUrl}:${source.sourceTitle}`);
@@ -142,6 +143,40 @@ export function saveChannelOutputsForContent(db, item, outputs, payload = {}) {
     return {
       item: updated,
       outputs: savedOutputs
+    };
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+export function markChannelOutputRendered(db, item, channelOutput, artifactPath, payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.PUBLISH_PENDING);
+
+  db.exec('BEGIN');
+  try {
+    const output = updateChannelOutputArtifact(db, {
+      id: channelOutput.channel_output_id || channelOutput.id,
+      status: CHANNEL_STATUSES.PUBLISH_PENDING,
+      artifactPath
+    });
+
+    const updated = updateContentStatus(db, {
+      id: item.id,
+      status: CONTENT_STATUSES.PUBLISH_PENDING,
+      eventType: `content.transition.${item.status}.${CONTENT_STATUSES.PUBLISH_PENDING}`,
+      payload: {
+        ...payload,
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        artifactPath
+      }
+    });
+
+    db.exec('COMMIT');
+
+    return {
+      item: updated,
+      output
     };
   } catch (error) {
     db.exec('ROLLBACK');

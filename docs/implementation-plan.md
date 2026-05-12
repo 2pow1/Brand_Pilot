@@ -34,15 +34,16 @@
 
 ## 현재 구현 위치
 
-현재 코드는 6단계까지 로컬에서 검증되었습니다.
+현재 코드는 7단계까지 로컬에서 검증되었습니다.
 
 - `collect`: 자료 후보를 `collected`로 저장
 - `draft`: 초안을 생성해 `draft_created`로 전환
 - `review request`: 검수 요청 후 `pending_review`로 전환
 - `review approve/reject`: 검수 결과 기록
 - `channel generate`: 승인된 초안을 Instagram 카드뉴스 payload로 변환하고 `channel_generated`로 전환
+- `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`으로 전환
 
-다음 구현 단계는 7단계, Instagram 카드뉴스 이미지 렌더링입니다.
+다음 구현 단계는 8단계, Instagram 실제 게시입니다.
 
 ## 상태 전이 기준
 

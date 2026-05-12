@@ -27,9 +27,9 @@ const PIPELINE_STAGES = [
   },
   {
     id: 'channel',
-    label: '채널별 콘텐츠 생성 완료',
+    label: '카드뉴스 이미지 렌더링 대기',
     status: CONTENT_STATUSES.CHANNEL_GENERATED,
-    nextCommand: 'node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1'
+    nextCommand: 'node --no-warnings=ExperimentalWarning src/cli.js instagram render --limit 1'
   },
   {
     id: 'publish',

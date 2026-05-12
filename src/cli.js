@@ -18,6 +18,7 @@ Usage:
   node src/cli.js review approve <content-id>
   node src/cli.js review reject <content-id> [reason]
   node src/cli.js channel generate [--limit <n>]
+  node src/cli.js instagram render [--limit <n>]
   node src/cli.js transitions
 `);
 }
@@ -365,6 +366,72 @@ async function runChannel(argv) {
   }
 }
 
+async function runInstagramRender(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const { renderInstagramCardNews } = await import('./render/instagram.js');
+  const { markChannelOutputRendered } = await import('./repository.js');
+  const { db, databasePath, dbApi } = await openAppDatabase();
+  const rows = dbApi.listChannelOutputsReadyToRender(db, {
+    channelId: 'instagram',
+    limit: options.limit
+  });
+  const rendered = [];
+  const failed = [];
+
+  for (const row of rows) {
+    try {
+      const payload = JSON.parse(row.channel_payload_json);
+      const result = renderInstagramCardNews({
+        cwd: config.cwd,
+        contentItemId: row.id,
+        payload
+      });
+      const saved = markChannelOutputRendered(db, row, row, result.outputDir, {
+        mode: 'powershell-system-drawing',
+        slideCount: result.slides.length,
+        manifestPath: result.manifestPath
+      });
+
+      rendered.push({
+        id: saved.item.id,
+        sourceTitle: saved.item.source_title,
+        status: saved.item.status,
+        channelId: saved.output.channel_id,
+        channelStatus: saved.output.status,
+        artifactPath: saved.output.artifact_path,
+        slides: result.slides
+      });
+    } catch (error) {
+      failed.push({
+        id: row.id,
+        sourceTitle: row.source_title,
+        error: error.message
+      });
+    }
+  }
+
+  console.log(`Database: ${databasePath}`);
+  console.log(JSON.stringify({
+    renderedCount: rendered.length,
+    failedCount: failed.length,
+    rendered,
+    failed,
+    summary: dbApi.summarize(db)
+  }, null, 2));
+  db.close();
+}
+
+async function runInstagram(argv) {
+  const action = argv[0];
+
+  if (action === 'render') {
+    await runInstagramRender(argv.slice(1));
+  } else {
+    throw new Error('instagram command must be: render');
+  }
+}
+
 function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
@@ -380,6 +447,7 @@ async function main() {
   else if (command === 'draft') await runDraft(args);
   else if (command === 'review') await runReview(args);
   else if (command === 'channel') await runChannel(args);
+  else if (command === 'instagram') await runInstagram(args);
   else if (command === 'transitions') runTransitions();
   else {
     printUsage();

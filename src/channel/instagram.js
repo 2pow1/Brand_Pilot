@@ -47,6 +47,7 @@ export function createInstagramCardNewsPayload({ brand, item, channel }) {
 
   return {
     channelId: 'instagram',
+    brandName: companyName,
     format: channel.format,
     template: channel.template,
     dimensions: {

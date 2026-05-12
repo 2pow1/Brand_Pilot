@@ -20,6 +20,7 @@ coverage/
 *.sqlite
 *.sqlite3
 data/
+artifacts/generated/
 tmp/
 temp/
 
