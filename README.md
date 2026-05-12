@@ -1,5 +1,7 @@
 ﻿# Brand Pilot
 
+Advertising content automation MVP.
+
 Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하기 위한 2주 MVP 프로젝트입니다.
 
 해외 브랜딩/마케팅 자료를 수집하고, GPT API로 공통 초안을 만든 뒤, Discord에서 클라이언트가 승인하거나 거절합니다. 승인된 초안은 채널별 템플릿에 맞춰 변환되며, MVP에서는 Instagram 카드뉴스 생성과 실제 게시까지를 우선 범위로 둡니다.
