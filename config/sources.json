@@ -1,0 +1,38 @@
+[
+  {
+    "id": "baemin-ceo-knowhow",
+    "name": "Baemin CEO Knowhow",
+    "url": "https://ceo.baemin.com/knowhow",
+    "enabled": true
+  },
+  {
+    "id": "the-branding-journal",
+    "name": "The Branding Journal",
+    "url": "https://www.thebrandingjournal.com/",
+    "enabled": true
+  },
+  {
+    "id": "opensurvey-article",
+    "name": "OpenSurvey Article",
+    "url": "https://blog.opensurvey.co.kr/category/article/",
+    "enabled": true
+  },
+  {
+    "id": "stone-insight",
+    "name": "Stone Insight",
+    "url": "https://stonebc.com/insight",
+    "enabled": true
+  },
+  {
+    "id": "trendwatching",
+    "name": "TrendWatching",
+    "url": "https://www.trendwatching.com",
+    "enabled": true
+  },
+  {
+    "id": "hootsuite-blog",
+    "name": "Hootsuite Blog",
+    "url": "https://blog.hootsuite.com/page/2/",
+    "enabled": true
+  }
+]

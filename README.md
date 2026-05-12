@@ -35,3 +35,14 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 ## 환경 변수
 
 `.env.example`을 기준으로 로컬 `.env`를 생성합니다. 실제 API 키와 토큰은 GitHub에 커밋하지 않습니다.
+
+## 로컬 실행
+
+현재 구현은 Node.js 24의 내장 SQLite를 사용합니다.
+
+```powershell
+node --no-warnings=ExperimentalWarning src/cli.js init
+node --no-warnings=ExperimentalWarning src/cli.js status
+node --no-warnings=ExperimentalWarning src/cli.js sample
+node --no-warnings=ExperimentalWarning --test
+```

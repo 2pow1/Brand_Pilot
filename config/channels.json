@@ -1,0 +1,34 @@
+[
+  {
+    "id": "instagram",
+    "name": "Instagram",
+    "enabled": true,
+    "format": "card_news",
+    "template": "instagram-card-news-v1",
+    "notes": "MVP target. Generate about five square slides, caption, hashtags, and CTA."
+  },
+  {
+    "id": "blog",
+    "name": "Blog",
+    "enabled": false,
+    "format": "article",
+    "template": "blog-article-v1",
+    "notes": "Future expansion channel."
+  },
+  {
+    "id": "facebook",
+    "name": "Facebook",
+    "enabled": false,
+    "format": "social_post",
+    "template": "facebook-post-v1",
+    "notes": "Future expansion channel."
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "enabled": false,
+    "format": "professional_post",
+    "template": "linkedin-post-v1",
+    "notes": "Future expansion channel."
+  }
+]

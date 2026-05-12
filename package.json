@@ -1,0 +1,16 @@
+{
+  "name": "brand-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Advertising content automation MVP",
+  "scripts": {
+    "init": "node --no-warnings=ExperimentalWarning src/cli.js init",
+    "status": "node --no-warnings=ExperimentalWarning src/cli.js status",
+    "sample": "node --no-warnings=ExperimentalWarning src/cli.js sample",
+    "test": "node --no-warnings=ExperimentalWarning --test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
