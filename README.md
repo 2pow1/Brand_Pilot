@@ -32,6 +32,10 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 
 자세한 정리는 `artifacts/flows/README.md`를 참고합니다.
 
+## 개발 규칙
+
+- 커밋 메시지 규칙은 `docs/commit-convention.md`를 따릅니다.
+
 ## 환경 변수
 
 `.env.example`을 기준으로 로컬 `.env`를 생성합니다. 실제 API 키와 토큰은 GitHub에 커밋하지 않습니다.
