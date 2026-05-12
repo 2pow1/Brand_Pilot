@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2300" viewBox="0 0 1600 2300">
+  <defs>
+    <marker id="arrow" markerWidth="16" markerHeight="16" refX="13" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,10 L14,5 z" fill="#1f2937"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 800 50px Arial, sans-serif; fill: #111827; }
+      .subtitle { font: 500 26px Arial, sans-serif; fill: #475569; }
+      .section { font: 800 30px Arial, sans-serif; fill: #111827; }
+      .body { font: 500 25px Arial, sans-serif; fill: #334155; }
+      .small { font: 500 22px Arial, sans-serif; fill: #64748b; }
+      .card { fill: #ffffff; stroke-width: 3; }
+      .arrow { stroke: #1f2937; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .branch { stroke: #475569; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .loop { stroke: #2563eb; stroke-width: 4; fill: none; marker-end: url(#arrow); stroke-dasharray: 16 12; }
+      .label { font: 800 24px Arial, sans-serif; fill: #111827; }
+      .badge { font: 800 22px Arial, sans-serif; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="2300"/>
+
+  <text x="110" y="105" class="title">사용자 흐름도</text>
+  <text x="110" y="150" class="subtitle">공통 초안 승인 후, 선택한 채널에 맞게 콘텐츠를 자동 변환하는 구조</text>
+
+  <rect x="110" y="210" width="1380" height="180" rx="28" class="card" stroke="#4f46e5"/>
+  <rect x="140" y="240" width="118" height="42" rx="21" fill="#4f46e5"/>
+  <text x="164" y="269" class="badge">1회</text>
+  <text x="300" y="270" class="section">처음 1회 정보 제공</text>
+  <text x="300" y="315" class="body">회사/서비스 정보, 홍보 목표, 상담 링크 또는 오픈채팅 링크를 전달합니다.</text>
+  <text x="300" y="352" class="small">대표/고객사는 별도 소프트웨어를 설치하지 않습니다.</text>
+
+  <path d="M800 390 V465" class="arrow"/>
+
+  <rect x="110" y="465" width="1380" height="190" rx="28" class="card" stroke="#059669"/>
+  <rect x="140" y="495" width="150" height="42" rx="21" fill="#059669"/>
+  <text x="165" y="524" class="badge">반복</text>
+  <text x="330" y="525" class="section">콘텐츠 요청</text>
+  <text x="330" y="570" class="body">홍보하고 싶은 주제, 참고 URL 또는 키워드를 전달합니다.</text>
+  <text x="330" y="608" class="body">게시할 채널을 선택합니다.</text>
+
+  <path d="M800 655 V730" class="arrow"/>
+
+  <rect x="110" y="730" width="1380" height="190" rx="28" class="card" stroke="#0f766e"/>
+  <rect x="140" y="760" width="150" height="42" rx="21" fill="#0f766e"/>
+  <text x="165" y="789" class="badge">반복</text>
+  <text x="330" y="790" class="section">공통 초안 확인</text>
+  <text x="330" y="835" class="body">AI가 만든 핵심 메시지, 홍보 방향, CTA를 확인합니다.</text>
+  <text x="330" y="873" class="small">이 단계에서는 아직 채널별 최종 콘텐츠가 게시되지 않습니다.</text>
+
+  <path d="M800 920 V1005" class="arrow"/>
+
+  <polygon points="800,1005 1030,1145 800,1285 570,1145" fill="#ffffff" stroke="#ea580c" stroke-width="4"/>
+  <text x="704" y="1135" class="section">초안 승인?</text>
+  <text x="715" y="1175" class="small">승인 또는 거절</text>
+
+  <path d="M570 1145 H300 V1380" class="branch"/>
+  <text x="370" y="1110" class="label">거절</text>
+
+  <rect x="110" y="1380" width="560" height="190" rx="28" class="card" stroke="#dc2626"/>
+  <rect x="140" y="1410" width="118" height="42" rx="21" fill="#dc2626"/>
+  <text x="164" y="1439" class="badge">종료</text>
+  <text x="300" y="1440" class="section">게시하지 않음</text>
+  <text x="300" y="1485" class="body">이번 콘텐츠는 게시되지 않습니다.</text>
+  <text x="300" y="1523" class="small">다음 요청 또는 다음 일정으로 이동합니다.</text>
+
+  <path d="M1030 1145 H1300 V1380" class="branch"/>
+  <text x="1138" y="1110" class="label">승인</text>
+
+  <rect x="810" y="1380" width="680" height="240" rx="28" class="card" stroke="#2563eb"/>
+  <rect x="840" y="1410" width="150" height="42" rx="21" fill="#2563eb"/>
+  <text x="865" y="1439" class="badge">자동</text>
+  <text x="1030" y="1440" class="section">채널별 콘텐츠 생성</text>
+  <text x="1030" y="1485" class="body">선택한 채널에 맞게 콘텐츠가 자동 변환됩니다.</text>
+  <text x="1030" y="1523" class="small">현재 MVP는 Instagram만 실제 게시합니다.</text>
+
+  <path d="M1150 1620 V1690" class="arrow"/>
+
+  <rect x="235" y="1690" width="350" height="185" rx="24" class="card" stroke="#e11d48"/>
+  <text x="295" y="1750" class="section">Instagram</text>
+  <text x="295" y="1792" class="body">카드뉴스 5장</text>
+  <text x="295" y="1830" class="body">캐러셀 게시</text>
+
+  <rect x="625" y="1690" width="350" height="185" rx="24" class="card" stroke="#64748b"/>
+  <text x="685" y="1750" class="section">Blog</text>
+  <text x="685" y="1792" class="body">긴 글 형식</text>
+  <text x="685" y="1830" class="small">추후 확장</text>
+
+  <rect x="1015" y="1690" width="350" height="185" rx="24" class="card" stroke="#64748b"/>
+  <text x="1075" y="1750" class="section">Facebook / LinkedIn</text>
+  <text x="1075" y="1792" class="body">짧은 게시글</text>
+  <text x="1075" y="1830" class="small">추후 확장</text>
+
+  <path d="M1150 1620 C1150 1655 410 1655 410 1682" class="branch"/>
+  <path d="M1150 1620 C1150 1658 800 1658 800 1682" class="branch"/>
+  <path d="M1150 1620 V1682" class="branch"/>
+
+  <path d="M410 1875 C410 1940 800 1940 800 1995" class="branch"/>
+  <path d="M800 1875 V1995" class="branch"/>
+  <path d="M1190 1875 C1190 1940 800 1940 800 1995" class="branch"/>
+
+  <rect x="300" y="1995" width="1000" height="185" rx="28" class="card" stroke="#111827"/>
+  <text x="540" y="2060" class="section">게시 결과 확인</text>
+  <text x="540" y="2105" class="body">게시 완료 여부와 게시 링크 또는 결과를 공유받습니다.</text>
+  <text x="540" y="2143" class="small">승인된 콘텐츠만 게시됩니다.</text>
+
+  <path d="M300 1570 C300 2220 800 2220 800 2180" class="branch"/>
+  <path d="M800 2180 C800 2250 1510 2250 1510 560 C1510 515 1490 500 1490 500" class="loop"/>
+  <text x="930" y="2248" class="small">다음 콘텐츠 요청 또는 다음 게시 일정으로 반복</text>
+</svg>
