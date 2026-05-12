@@ -14,6 +14,9 @@ Usage:
   node src/cli.js sample
   node src/cli.js collect [--dry-run] [--limit <n>]
   node src/cli.js draft [--mock] [--limit <n>]
+  node src/cli.js review request [--mock] [--limit <n>]
+  node src/cli.js review approve <content-id>
+  node src/cli.js review reject <content-id> [reason]
   node src/cli.js transitions
 `);
 }
@@ -200,6 +203,101 @@ async function runDraft(argv) {
   db.close();
 }
 
+async function runReviewRequest(argv) {
+  const options = parseOptions(argv);
+  const config = loadConfig();
+  const { createReviewRequest } = await import('./review/index.js');
+  const { requestReviewForContent } = await import('./repository.js');
+  const { db, databasePath, dbApi } = await openAppDatabase();
+  const items = dbApi.listContentItemsByStatus(db, CONTENT_STATUSES.DRAFT_CREATED, {
+    limit: options.limit
+  });
+  const requested = [];
+  const failed = [];
+
+  for (const item of items) {
+    try {
+      const review = await createReviewRequest({
+        config,
+        item,
+        mock: options.mock
+      });
+      const updated = requestReviewForContent(db, item, review.messageId, {
+        mode: options.mock ? 'mock' : 'discord',
+        channelId: review.channelId,
+        url: review.url
+      });
+
+      requested.push({
+        id: updated.id,
+        draftTitle: updated.draft_title,
+        status: updated.status,
+        reviewMessageId: updated.review_message_id,
+        url: review.url
+      });
+    } catch (error) {
+      failed.push({
+        id: item.id,
+        draftTitle: item.draft_title,
+        error: error.message
+      });
+    }
+  }
+
+  console.log(`Database: ${databasePath}`);
+  console.log(JSON.stringify({
+    mode: options.mock ? 'mock' : 'discord',
+    requestedCount: requested.length,
+    failedCount: failed.length,
+    requested,
+    failed,
+    summary: dbApi.summarize(db)
+  }, null, 2));
+  db.close();
+}
+
+async function runReviewDecision(action, argv) {
+  const contentId = argv[0];
+  if (!contentId) {
+    throw new Error(`content-id is required for review ${action}`);
+  }
+
+  const { approveContent, rejectContent } = await import('./repository.js');
+  const { db, databasePath, dbApi } = await openAppDatabase();
+  const item = dbApi.getContentItem(db, contentId);
+
+  if (!item) {
+    throw new Error(`Content item not found: ${contentId}`);
+  }
+
+  const updated =
+    action === 'approve'
+      ? approveContent(db, item, { mode: 'manual-cli' })
+      : rejectContent(db, item, argv.slice(1).join(' ') || 'rejected', { mode: 'manual-cli' });
+
+  console.log(`Database: ${databasePath}`);
+  console.log(JSON.stringify({
+    id: updated.id,
+    sourceTitle: updated.source_title,
+    draftTitle: updated.draft_title,
+    status: updated.status,
+    summary: dbApi.summarize(db)
+  }, null, 2));
+  db.close();
+}
+
+async function runReview(argv) {
+  const action = argv[0];
+
+  if (action === 'request') {
+    await runReviewRequest(argv.slice(1));
+  } else if (action === 'approve' || action === 'reject') {
+    await runReviewDecision(action, argv.slice(1));
+  } else {
+    throw new Error('review command must be one of: request, approve, reject');
+  }
+}
+
 function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
@@ -213,6 +311,7 @@ async function main() {
   else if (command === 'sample') await runSample();
   else if (command === 'collect') await runCollect(args);
   else if (command === 'draft') await runDraft(args);
+  else if (command === 'review') await runReview(args);
   else if (command === 'transitions') runTransitions();
   else {
     printUsage();

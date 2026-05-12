@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createId } from './ids.js';
+import { buildPipelineProgress } from './progress.js';
 import { CONTENT_STATUSES } from './state.js';
 import { nowIso } from './time.js';
 
@@ -159,6 +160,58 @@ export function updateContentDraft(db, { id, draftTitle, draftBody, status, even
   return getContentItem(db, id);
 }
 
+export function updateReviewRequest(db, { id, reviewMessageId, status, eventType, payload = {} }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE content_items
+    SET status = ?,
+        review_message_id = ?,
+        review_requested_at = ?,
+        updated_at = ?,
+        last_error = ''
+    WHERE id = ?
+  `).run(status, reviewMessageId, updatedAt, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Content item not found: ${id}`);
+  }
+
+  insertEvent(db, {
+    contentItemId: id,
+    eventType,
+    payload: { ...payload, status, reviewMessageId }
+  });
+
+  return getContentItem(db, id);
+}
+
+export function updateReviewDecision(db, { id, status, rejectionReason = '', eventType, payload = {} }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE content_items
+    SET status = ?,
+        review_decision_at = ?,
+        rejection_reason = ?,
+        updated_at = ?,
+        last_error = ''
+    WHERE id = ?
+  `).run(status, updatedAt, rejectionReason, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Content item not found: ${id}`);
+  }
+
+  insertEvent(db, {
+    contentItemId: id,
+    eventType,
+    payload: { ...payload, status, rejectionReason }
+  });
+
+  return getContentItem(db, id);
+}
+
 export function updateContentStatus(db, { id, status, eventType, payload = {} }) {
   const updatedAt = nowIso();
 
@@ -203,9 +256,14 @@ export function summarize(db) {
     LIMIT 10
   `).all();
 
-  return {
+  const summary = {
     contentByStatus,
     channelsByStatus,
     recentEvents
+  };
+
+  return {
+    progress: buildPipelineProgress(summary),
+    ...summary
   };
 }

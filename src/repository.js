@@ -2,6 +2,8 @@ import {
   getContentItemByFingerprint,
   insertContentItem,
   updateContentDraft,
+  updateReviewDecision,
+  updateReviewRequest,
   updateContentStatus
 } from './db.js';
 import { fingerprint } from './ids.js';
@@ -67,5 +69,40 @@ export function saveDraftForContent(db, item, draft, payload = {}) {
       keyPoints: draft.keyPoints,
       cta: draft.cta
     }
+  });
+}
+
+export function requestReviewForContent(db, item, reviewMessageId, payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.PENDING_REVIEW);
+
+  return updateReviewRequest(db, {
+    id: item.id,
+    reviewMessageId,
+    status: CONTENT_STATUSES.PENDING_REVIEW,
+    eventType: 'content.review.requested',
+    payload
+  });
+}
+
+export function approveContent(db, item, payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.APPROVED);
+
+  return updateReviewDecision(db, {
+    id: item.id,
+    status: CONTENT_STATUSES.APPROVED,
+    eventType: 'content.review.approved',
+    payload
+  });
+}
+
+export function rejectContent(db, item, reason = '', payload = {}) {
+  assertContentTransition(item.status, CONTENT_STATUSES.REJECTED);
+
+  return updateReviewDecision(db, {
+    id: item.id,
+    status: CONTENT_STATUSES.REJECTED,
+    rejectionReason: reason,
+    eventType: 'content.review.rejected',
+    payload
   });
 }

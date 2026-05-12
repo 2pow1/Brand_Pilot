@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 const DEFAULT_DATABASE_URL = 'file:./data/brand-pilot.sqlite';
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
+const DEFAULT_DISCORD_BASE_URL = 'https://discord.com/api/v10';
 
 function parseDotEnv(content) {
   const values = {};
@@ -51,6 +52,7 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     openaiBaseUrl: merged.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL,
     discordBotToken: merged.DISCORD_BOT_TOKEN || '',
     discordReviewChannelId: merged.DISCORD_REVIEW_CHANNEL_ID || '',
+    discordBaseUrl: merged.DISCORD_BASE_URL || DEFAULT_DISCORD_BASE_URL,
     notionToken: merged.NOTION_TOKEN || '',
     notionDatabaseId: merged.NOTION_DATABASE_ID || '',
     metaAccessToken: merged.META_ACCESS_TOKEN || '',
