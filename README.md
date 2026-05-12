@@ -14,7 +14,7 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 - 승인 시 Instagram 카드뉴스 콘텐츠 생성
 - Instagram 게시
 - Notion 기록 미러
-- SQLite 기반 내부 상태 관리
+- Supabase 기준 내부 상태 관리(SQLite 로컬 fallback)
 
 ## 주요 전제
 
@@ -40,9 +40,11 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 
 `.env.example`을 기준으로 로컬 `.env`를 생성합니다. 실제 API 키와 토큰은 GitHub에 커밋하지 않습니다.
 
+운영 환경의 상태 저장소는 Supabase Postgres를 기준으로 설계합니다. 로컬 CLI 검증은 `DATABASE_PROVIDER=sqlite`로 SQLite fallback을 사용하고, 운영 전환 시에는 `supabase/schema.sql`을 적용한 뒤 Supabase adapter를 붙입니다. 자세한 운영 DB 설계는 `docs/supabase-architecture.md`를 참고합니다.
+
 ## 로컬 실행
 
-현재 구현은 Node.js 24의 내장 SQLite를 사용합니다.
+현재 CLI 구현은 Node.js 24의 내장 SQLite adapter를 사용합니다.
 
 ```powershell
 node --no-warnings=ExperimentalWarning src/cli.js init

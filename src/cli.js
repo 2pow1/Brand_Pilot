@@ -2,6 +2,7 @@
 
 import { resolve } from 'node:path';
 import { databasePathFromUrl, loadBrandConfig, loadConfig, loadJsonConfig } from './config.js';
+import { assertSqliteCliRuntime, describeDatabaseProvider } from './database/provider.js';
 import { fingerprint } from './ids.js';
 import { CONTENT_STATUSES, contentTransitions } from './state.js';
 
@@ -55,10 +56,11 @@ function parseOptions(argv) {
 async function openAppDatabase() {
   const dbApi = await import('./db.js');
   const config = loadConfig();
+  assertSqliteCliRuntime(config);
   const databasePath = databasePathFromUrl(config.databaseUrl, config.cwd);
   const db = dbApi.openDatabase(databasePath);
   dbApi.migrate(db);
-  return { db, databasePath, dbApi };
+  return { db, databasePath, dbApi, config };
 }
 
 function printSummary(summary) {
@@ -66,13 +68,17 @@ function printSummary(summary) {
 }
 
 async function runInit() {
-  const { db, databasePath } = await openAppDatabase();
+  const { db, databasePath, config } = await openAppDatabase();
+  const provider = describeDatabaseProvider(config);
   db.close();
+  console.log(`Database provider: ${provider.label}`);
   console.log(`Initialized database: ${databasePath}`);
 }
 
 async function runStatus() {
-  const { db, databasePath, dbApi } = await openAppDatabase();
+  const { db, databasePath, dbApi, config } = await openAppDatabase();
+  const provider = describeDatabaseProvider(config);
+  console.log(`Database provider: ${provider.label}`);
   console.log(`Database: ${databasePath}`);
   printSummary(dbApi.summarize(db));
   db.close();

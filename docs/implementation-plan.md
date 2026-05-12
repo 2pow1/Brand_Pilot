@@ -7,7 +7,9 @@
 1. 저장소와 기획 산출물 정리
    - GitHub 관리, README, 환경 변수 예시, 흐름도 정리
 2. 내부 상태 기반 앱 골격
-   - SQLite schema, 상태 전이, CLI, 테스트
+   - 로컬 개발은 SQLite로 빠르게 검증
+   - 운영 source of truth는 Supabase Postgres로 전환
+   - 상태 전이, CLI, 테스트 유지
 3. 자료 수집
    - 지정 소스 fetch, HTML 후보 추출, 중복 저장 방지
 4. 공통 초안 생성
@@ -43,7 +45,13 @@
 - `channel generate`: 승인된 초안을 Instagram 카드뉴스 payload로 변환하고 `channel_generated`로 전환
 - `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`으로 전환
 
-다음 구현 단계는 8단계, Instagram 실제 게시입니다.
+다음 구현 단계는 Supabase 운영 DB 전환 준비를 마친 뒤, 8단계 Instagram 실제 게시 또는 9단계 Notion 기록 미러입니다.
+
+## 운영 DB 기준
+
+운영 환경에서는 Supabase Postgres를 상태 저장소로 사용합니다.
+
+로컬 개발에서는 `DATABASE_PROVIDER=sqlite`로 SQLite를 계속 사용할 수 있습니다. 실제 배포에서는 `DATABASE_PROVIDER=supabase`와 Supabase URL/key를 사용하고, `supabase/schema.sql`을 적용한 Postgres 테이블을 source of truth로 둡니다.
 
 ## 상태 전이 기준
 
