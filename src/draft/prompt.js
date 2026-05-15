@@ -1,3 +1,6 @@
+/**
+ * Builds the system and user prompts used to create the common review draft.
+ */
 export function buildDraftPrompt({ brand, item }) {
   return {
     system: [

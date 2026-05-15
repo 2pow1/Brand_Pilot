@@ -1,10 +1,16 @@
 import { fingerprint } from './ids.js';
 import { assertContentTransition, CHANNEL_STATUSES, CONTENT_STATUSES } from './state.js';
 
+/**
+ * Builds the duplicate-detection fingerprint for one scraped source candidate.
+ */
 export function sourceFingerprintFor(source) {
   return fingerprint(`${source.sourceId}:${source.sourceUrl}:${source.sourceTitle}`);
 }
 
+/**
+ * Inserts a new collected content item without checking for duplicates.
+ */
 export async function createCollectedContent(store, source) {
   const sourceFingerprint = sourceFingerprintFor(source);
   return store.insertContentItem({
@@ -18,6 +24,9 @@ export async function createCollectedContent(store, source) {
   });
 }
 
+/**
+ * Inserts a collected content item only when its source fingerprint is not already stored.
+ */
 export async function createCollectedContentIfNew(store, source) {
   const sourceFingerprint = sourceFingerprintFor(source);
   const existing = await store.getContentItemByFingerprint(sourceFingerprint);
@@ -35,6 +44,9 @@ export async function createCollectedContentIfNew(store, source) {
   };
 }
 
+/**
+ * Moves a content item to another status after validating the lifecycle transition.
+ */
 export async function transitionContent(store, item, toStatus, payload = {}) {
   assertContentTransition(item.status, toStatus);
 
@@ -46,6 +58,9 @@ export async function transitionContent(store, item, toStatus, payload = {}) {
   });
 }
 
+/**
+ * Stores the common draft and marks the item ready for human review.
+ */
 export async function saveDraftForContent(store, item, draft, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.DRAFT_CREATED);
 
@@ -64,6 +79,9 @@ export async function saveDraftForContent(store, item, draft, payload = {}) {
   });
 }
 
+/**
+ * Records that a Discord review request has been created for a draft.
+ */
 export async function requestReviewForContent(store, item, reviewMessageId, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.PENDING_REVIEW);
 
@@ -76,6 +94,9 @@ export async function requestReviewForContent(store, item, reviewMessageId, payl
   });
 }
 
+/**
+ * Marks a pending review as approved so channel-specific outputs can be generated.
+ */
 export async function approveContent(store, item, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.APPROVED);
 
@@ -87,6 +108,9 @@ export async function approveContent(store, item, payload = {}) {
   });
 }
 
+/**
+ * Marks a pending review as rejected and closes that item from further automation.
+ */
 export async function rejectContent(store, item, reason = '', payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.REJECTED);
 
@@ -99,6 +123,9 @@ export async function rejectContent(store, item, reason = '', payload = {}) {
   });
 }
 
+/**
+ * Persists generated channel payloads and advances the content item to channel_generated.
+ */
 export async function saveChannelOutputsForContent(store, item, outputs, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.CHANNEL_GENERATED);
 
@@ -136,6 +163,9 @@ export async function saveChannelOutputsForContent(store, item, outputs, payload
   });
 }
 
+/**
+ * Records local render artifacts and advances the item to publish_pending.
+ */
 export async function markChannelOutputRendered(store, item, channelOutput, artifactPath, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.PUBLISH_PENDING);
 
@@ -164,6 +194,9 @@ export async function markChannelOutputRendered(store, item, channelOutput, arti
   });
 }
 
+/**
+ * Records a successful external publish and advances the item to published.
+ */
 export async function markChannelOutputPublished(store, item, channelOutput, publishedUrl, payload = {}) {
   assertContentTransition(item.status, CONTENT_STATUSES.PUBLISHED);
 
@@ -192,6 +225,9 @@ export async function markChannelOutputPublished(store, item, channelOutput, pub
   });
 }
 
+/**
+ * Records public Storage artifact URLs without changing the publish_pending content status.
+ */
 export async function markChannelOutputUploaded(store, item, channelOutput, artifactPath, payload = {}) {
   if (item.status !== CONTENT_STATUSES.PUBLISH_PENDING) {
     throw new Error(`Expected publish_pending content before upload, received: ${item.status}`);
@@ -221,6 +257,9 @@ export async function markChannelOutputUploaded(store, item, channelOutput, arti
   });
 }
 
+/**
+ * Stores the Notion mirror page ID and sync timestamp for a content item.
+ */
 export async function markContentNotionSynced(store, item, notionPageId, payload = {}) {
   return store.updateContentNotionSync({
     id: item.id,

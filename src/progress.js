@@ -45,10 +45,16 @@ const PIPELINE_STAGES = [
   }
 ];
 
+/**
+ * Converts grouped status rows into a lookup map for progress rendering.
+ */
 function countByStatus(summary) {
   return Object.fromEntries(summary.contentByStatus.map((row) => [row.status, row.count]));
 }
 
+/**
+ * Builds the human-readable current step, active stages, and suggested next commands.
+ */
 export function buildPipelineProgress(summary) {
   const counts = countByStatus(summary);
   const stages = PIPELINE_STAGES.map((stage) => ({

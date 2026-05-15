@@ -1,3 +1,6 @@
+/**
+ * Downloads HTML from a source URL with a timeout and a crawler-friendly user agent.
+ */
 export async function fetchHtml(url, { timeoutMs = 15000 } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);

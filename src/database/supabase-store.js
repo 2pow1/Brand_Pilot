@@ -2,20 +2,32 @@ import { createId } from '../ids.js';
 import { buildPipelineProgress } from '../progress.js';
 import { CHANNEL_STATUSES, CONTENT_STATUSES } from '../state.js';
 
+/**
+ * Fails fast when a required Supabase database setting is missing.
+ */
 function requireConfigValue(config, key, label) {
   if (!config[key]) {
     throw new Error(`${label} is required when DATABASE_PROVIDER=supabase`);
   }
 }
 
+/**
+ * Normalizes Supabase project URLs before building REST endpoints.
+ */
 function normalizeBaseUrl(value) {
   return value.replace(/\/+$/, '');
 }
 
+/**
+ * Returns the current timestamp for Supabase rows and events.
+ */
 function nowIso() {
   return new Date().toISOString();
 }
 
+/**
+ * Normalizes Supabase JSONB payloads to the string shape expected by existing CLI code.
+ */
 function normalizePayloadJson(row) {
   if (!row || typeof row.payload_json === 'string') return row;
   return {
@@ -24,6 +36,9 @@ function normalizePayloadJson(row) {
   };
 }
 
+/**
+ * Selects the event fields displayed in status summaries.
+ */
 function normalizeEvent(row) {
   return {
     id: row.id,
@@ -33,6 +48,9 @@ function normalizeEvent(row) {
   };
 }
 
+/**
+ * Groups raw status rows into count rows for progress summaries.
+ */
 function countByStatus(rows) {
   const counts = new Map();
   for (const row of rows) {
@@ -44,6 +62,9 @@ function countByStatus(rows) {
     .map(([status, count]) => ({ status, count }));
 }
 
+/**
+ * Creates a Supabase REST-backed implementation of the shared store adapter.
+ */
 export function createSupabaseStore(config) {
   requireConfigValue(config, 'supabaseUrl', 'SUPABASE_URL');
   requireConfigValue(config, 'supabaseServiceRoleKey', 'SUPABASE_SERVICE_ROLE_KEY');
@@ -52,6 +73,9 @@ export function createSupabaseStore(config) {
   const restUrl = `${supabaseUrl}/rest/v1`;
   const apiKey = config.supabaseServiceRoleKey;
 
+  /**
+   * Sends one authenticated Supabase REST request and parses the JSON response.
+   */
   async function request(path, { method = 'GET', search = {}, body, prefer } = {}) {
     const url = new URL(`${restUrl}/${path}`);
     for (const [key, value] of Object.entries(search)) {
@@ -88,6 +112,9 @@ export function createSupabaseStore(config) {
     return text ? JSON.parse(text) : null;
   }
 
+  /**
+   * Inserts one audit event through the Supabase REST API.
+   */
   async function insertEvent({ contentItemId = null, eventType, payload = {} }) {
     await request('events', {
       method: 'POST',
@@ -100,6 +127,9 @@ export function createSupabaseStore(config) {
     });
   }
 
+  /**
+   * Fetches the first row matching a REST query.
+   */
   async function fetchOne(path, search) {
     const rows = await request(path, {
       search: {
@@ -110,6 +140,9 @@ export function createSupabaseStore(config) {
     return rows[0] || null;
   }
 
+  /**
+   * Updates one row and returns the updated representation.
+   */
   async function patchOne(path, search, body) {
     const rows = await request(path, {
       method: 'PATCH',
@@ -130,12 +163,21 @@ export function createSupabaseStore(config) {
     label: 'Supabase Postgres production database',
     location: supabaseUrl,
 
+    /**
+     * Keeps the store interface symmetrical with SQLite; Supabase has no local handle to close.
+     */
     async close() {},
 
+    /**
+     * Runs a callback in the shared store interface; Supabase REST calls are individually committed.
+     */
     async withTransaction(callback) {
       return callback();
     },
 
+    /**
+     * Loads one content item by ID.
+     */
     async getContentItem(id) {
       return fetchOne('content_items', {
         select: '*',
@@ -143,6 +185,9 @@ export function createSupabaseStore(config) {
       });
     },
 
+    /**
+     * Loads one content item by duplicate-detection fingerprint.
+     */
     async getContentItemByFingerprint(sourceFingerprint) {
       return fetchOne('content_items', {
         select: '*',
@@ -150,6 +195,9 @@ export function createSupabaseStore(config) {
       });
     },
 
+    /**
+     * Inserts a collected content item and its creation event.
+     */
     async insertContentItem(input) {
       const id = input.id || createId('content');
       const createdAt = nowIso();
@@ -179,10 +227,16 @@ export function createSupabaseStore(config) {
       return rows[0];
     },
 
+    /**
+     * Appends an audit event.
+     */
     async insertEvent(input) {
       return insertEvent(input);
     },
 
+    /**
+     * Lists content items by lifecycle status.
+     */
     async listContentItemsByStatus(status, { limit = 10 } = {}) {
       return request('content_items', {
         search: {
@@ -194,6 +248,9 @@ export function createSupabaseStore(config) {
       });
     },
 
+    /**
+     * Lists unsynced Notion rows first, then recently updated synced rows.
+     */
     async listContentItemsForNotionSync({ limit = 10 } = {}) {
       const unsynced = await request('content_items', {
         search: {
@@ -220,6 +277,9 @@ export function createSupabaseStore(config) {
       return [...unsynced, ...synced];
     },
 
+    /**
+     * Stores draft fields for a content item.
+     */
     async updateContentDraft({ id, draftTitle, draftBody, status, eventType, payload = {} }) {
       const updated = await patchOne(
         'content_items',
@@ -242,6 +302,9 @@ export function createSupabaseStore(config) {
       return updated;
     },
 
+    /**
+     * Stores Discord review request metadata.
+     */
     async updateReviewRequest({ id, reviewMessageId, status, eventType, payload = {} }) {
       const timestamp = nowIso();
       const updated = await patchOne(
@@ -265,6 +328,9 @@ export function createSupabaseStore(config) {
       return updated;
     },
 
+    /**
+     * Stores review approval or rejection metadata.
+     */
     async updateReviewDecision({ id, status, rejectionReason = '', eventType, payload = {} }) {
       const timestamp = nowIso();
       const updated = await patchOne(
@@ -288,6 +354,9 @@ export function createSupabaseStore(config) {
       return updated;
     },
 
+    /**
+     * Updates only the content lifecycle status.
+     */
     async updateContentStatus({ id, status, eventType, payload = {} }) {
       const updated = await patchOne(
         'content_items',
@@ -307,6 +376,9 @@ export function createSupabaseStore(config) {
       return updated;
     },
 
+    /**
+     * Stores Notion mirror metadata.
+     */
     async updateContentNotionSync({ id, notionPageId, eventType, payload = {} }) {
       const timestamp = nowIso();
       const updated = await patchOne(
@@ -327,6 +399,9 @@ export function createSupabaseStore(config) {
       return updated;
     },
 
+    /**
+     * Inserts or updates the channel-specific payload for one content item.
+     */
     async upsertChannelOutput({
       contentItemId,
       channelId,
@@ -390,6 +465,9 @@ export function createSupabaseStore(config) {
       return normalizePayloadJson(output);
     },
 
+    /**
+     * Lists generated channel outputs whose joined content item is ready for rendering.
+     */
     async listChannelOutputsReadyToRender({ channelId, limit = 10 } = {}) {
       const rows = await request('channel_outputs', {
         search: {
@@ -416,6 +494,9 @@ export function createSupabaseStore(config) {
       });
     },
 
+    /**
+     * Lists publish-pending channel outputs whose joined content item is ready for publishing.
+     */
     async listChannelOutputsReadyToPublish({ channelId, limit = 10 } = {}) {
       const rows = await request('channel_outputs', {
         search: {
@@ -442,6 +523,9 @@ export function createSupabaseStore(config) {
       });
     },
 
+    /**
+     * Stores a render or public upload artifact path on a channel output.
+     */
     async updateChannelOutputArtifact({ id, status, artifactPath }) {
       const output = await patchOne(
         'channel_outputs',
@@ -457,6 +541,9 @@ export function createSupabaseStore(config) {
       return normalizePayloadJson(output);
     },
 
+    /**
+     * Stores the external published URL for a channel output.
+     */
     async updateChannelOutputPublished({ id, status, publishedUrl }) {
       const output = await patchOne(
         'channel_outputs',
@@ -472,6 +559,9 @@ export function createSupabaseStore(config) {
       return normalizePayloadJson(output);
     },
 
+    /**
+     * Builds a Supabase-backed status summary for the CLI.
+     */
     async summarize() {
       const [contentRows, channelRows, eventRows] = await Promise.all([
         request('content_items', {

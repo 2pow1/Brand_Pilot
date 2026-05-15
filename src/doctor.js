@@ -66,6 +66,9 @@ const CHECKS = Object.freeze({
   ]
 });
 
+/**
+ * Evaluates one configuration requirement without including secret values in the result.
+ */
 function checkConfigValue(config, check) {
   const value = config[check.key];
   const configured = typeof value === 'string' ? value.trim().length > 0 : Boolean(value);
@@ -80,6 +83,9 @@ function checkConfigValue(config, check) {
   };
 }
 
+/**
+ * Builds a preflight report for a workflow target such as schedule or publish.
+ */
 export function buildDoctorReport(config, target = TARGETS.SCHEDULE) {
   const checks = CHECKS[target];
 
@@ -98,6 +104,9 @@ export function buildDoctorReport(config, target = TARGETS.SCHEDULE) {
   };
 }
 
+/**
+ * Formats a doctor report for CLI and GitHub Actions logs.
+ */
 export function formatDoctorReport(report) {
   const lines = [
     `Doctor target: ${report.target}`,

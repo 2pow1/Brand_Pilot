@@ -1,13 +1,22 @@
+/**
+ * Collapses arbitrary whitespace so slide and caption text fits predictable card layouts.
+ */
 function normalizeWhitespace(value) {
   return (value || '').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Shortens text for fixed-size Instagram slide regions while preserving a readable suffix.
+ */
 function truncate(value, maxLength) {
   const normalized = normalizeWhitespace(value);
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength - 1)}…`;
 }
 
+/**
+ * Splits the approved draft body into sentence-like parts used by the card-news template.
+ */
 function splitDraftBody(body) {
   return normalizeWhitespace(body)
     .split(/(?<=[.!?。！？]|다\.|요\.)\s+/)
@@ -15,6 +24,9 @@ function splitDraftBody(body) {
     .filter(Boolean);
 }
 
+/**
+ * Chooses the problem, insight, solution, and CTA copy blocks for the five-slide carousel.
+ */
 function pickBodyLines(item) {
   const sentences = splitDraftBody(item.draft_body);
 
@@ -26,6 +38,9 @@ function pickBodyLines(item) {
   };
 }
 
+/**
+ * Builds the Instagram caption from the draft, derived slide copy, and brand CTA settings.
+ */
 function buildCaption({ brand, item, lines }) {
   const ctaLabel = brand.cta?.label || '상담 채널 확인하기';
   const ctaUrl = brand.cta?.url || '';
@@ -40,6 +55,9 @@ function buildCaption({ brand, item, lines }) {
   ].join('\n');
 }
 
+/**
+ * Converts an approved content item into the Instagram card-news payload stored in channel_outputs.
+ */
 export function createInstagramCardNewsPayload({ brand, item, channel }) {
   const lines = pickBodyLines(item);
   const companyName = brand.companyName || 'Brand Pilot';

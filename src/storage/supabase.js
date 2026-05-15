@@ -6,16 +6,25 @@ const MIME_TYPES = Object.freeze({
   '.png': 'image/png'
 });
 
+/**
+ * Normalizes Supabase URLs before constructing REST and public object paths.
+ */
 function trimTrailingSlash(value) {
   return value.replace(/\/+$/, '');
 }
 
+/**
+ * Fails fast when a required Supabase Storage setting is missing.
+ */
 function requireConfigValue(config, key, label) {
   if (!config[key]) {
     throw new Error(`${label} is required for Supabase Storage upload`);
   }
 }
 
+/**
+ * Encodes each path segment while preserving Supabase Storage folder separators.
+ */
 function encodeObjectPath(value) {
   return value
     .split('/')
@@ -23,20 +32,32 @@ function encodeObjectPath(value) {
     .join('/');
 }
 
+/**
+ * Builds the public URL that Instagram can fetch for an uploaded object.
+ */
 function publicObjectUrl({ config, bucket, objectPath }) {
   return `${trimTrailingSlash(config.supabaseUrl)}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeObjectPath(objectPath)}`;
 }
 
+/**
+ * Builds the authenticated Storage API URL used for uploads.
+ */
 function storageObjectUrl({ config, bucket, objectPath }) {
   return `${trimTrailingSlash(config.supabaseUrl)}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeObjectPath(objectPath)}`;
 }
 
+/**
+ * Chooses a supported MIME type for rendered Instagram artifacts.
+ */
 function contentTypeFor(path) {
   const lower = path.toLowerCase();
   const extension = lower.slice(lower.lastIndexOf('.'));
   return MIME_TYPES[extension] || 'application/octet-stream';
 }
 
+/**
+ * Resolves a rendered artifact directory or manifest path into manifest.json.
+ */
 function localManifestPath(artifactPath) {
   if (!artifactPath) {
     throw new Error('Instagram upload requires a rendered artifact path');
@@ -45,10 +66,16 @@ function localManifestPath(artifactPath) {
   return artifactPath.endsWith('.json') ? artifactPath : join(artifactPath, 'manifest.json');
 }
 
+/**
+ * Checks whether an artifact path is already a public remote URL.
+ */
 function isHttpUrl(value) {
   return /^https?:\/\//i.test(value || '');
 }
 
+/**
+ * Reads the local render manifest, tolerating the UTF-8 BOM emitted by Windows tooling.
+ */
 function readManifest(artifactPath) {
   const manifestPath = localManifestPath(artifactPath);
 
@@ -64,17 +91,26 @@ function readManifest(artifactPath) {
   };
 }
 
+/**
+ * Extracts a local slide file path from either a string or manifest object entry.
+ */
 function normalizeSlidePath(slide) {
   if (typeof slide === 'string') return slide;
   return slide.localPath || slide.path || slide.filePath || '';
 }
 
+/**
+ * Builds the deterministic Storage object path for one rendered artifact file.
+ */
 function buildStoragePath({ row, fileName }) {
   const contentItemId = row.id;
   const channelOutputId = row.channel_output_id || 'channel';
   return `instagram/${contentItemId}/${channelOutputId}/${fileName}`;
 }
 
+/**
+ * Uploads one object to Supabase Storage with upsert semantics.
+ */
 export async function uploadStorageObject({ config, bucket, objectPath, body, contentType, fetchImpl = fetch }) {
   requireConfigValue(config, 'supabaseUrl', 'SUPABASE_URL');
   requireConfigValue(config, 'supabaseServiceRoleKey', 'SUPABASE_SERVICE_ROLE_KEY');
@@ -99,6 +135,9 @@ export async function uploadStorageObject({ config, bucket, objectPath, body, co
   return text ? JSON.parse(text) : {};
 }
 
+/**
+ * Uploads rendered Instagram slides and writes a public manifest for publishing.
+ */
 export async function uploadInstagramRenderArtifact({ config, row, payload, fetchImpl = fetch }) {
   if (isHttpUrl(row.channel_artifact_path)) {
     return {

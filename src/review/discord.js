@@ -1,5 +1,8 @@
 import { buildReviewPayload } from './message.js';
 
+/**
+ * Sends one draft to Discord for human approval or rejection.
+ */
 export async function sendDiscordReviewRequest({ config, item }) {
   if (!config.discordBotToken) {
     throw new Error('DISCORD_BOT_TOKEN is required. Use --mock to verify the review workflow locally.');
@@ -32,6 +35,9 @@ export async function sendDiscordReviewRequest({ config, item }) {
   };
 }
 
+/**
+ * Creates review metadata without calling Discord so pipeline state can be tested locally.
+ */
 export function createMockReviewRequest(item) {
   return {
     messageId: `mock_review_${item.id}`,

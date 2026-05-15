@@ -1,5 +1,8 @@
 import { DRAFT_RESPONSE_SCHEMA } from './schema.js';
 
+/**
+ * Extracts model text from the Responses API payload shape.
+ */
 export function extractResponseText(response) {
   if (typeof response.output_text === 'string') return response.output_text;
 
@@ -13,6 +16,9 @@ export function extractResponseText(response) {
   return chunks.join('');
 }
 
+/**
+ * Converts OpenAI schema field names into the app's draft object shape.
+ */
 function normalizeDraft(draft) {
   return {
     title: draft.title,
@@ -23,6 +29,9 @@ function normalizeDraft(draft) {
   };
 }
 
+/**
+ * Calls the OpenAI Responses API and returns a structured review-ready draft.
+ */
 export async function createOpenAiDraft({ config, prompt }) {
   if (!config.openaiApiKey) {
     throw new Error('OPENAI_API_KEY is required. Use --mock to generate a local draft without the API.');

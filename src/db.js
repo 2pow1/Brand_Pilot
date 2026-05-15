@@ -6,6 +6,9 @@ import { buildPipelineProgress } from './progress.js';
 import { CHANNEL_STATUSES, CONTENT_STATUSES } from './state.js';
 import { nowIso } from './time.js';
 
+/**
+ * Opens a local SQLite database and configures safety pragmas for CLI use.
+ */
 export function openDatabase(path) {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
@@ -15,6 +18,9 @@ export function openDatabase(path) {
   return db;
 }
 
+/**
+ * Adds a missing SQLite column during lightweight local migrations.
+ */
 function ensureColumn(db, tableName, columnName, definition) {
   const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
   if (columns.some((column) => column.name === columnName)) return;
@@ -22,6 +28,9 @@ function ensureColumn(db, tableName, columnName, definition) {
   db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
 }
 
+/**
+ * Creates or updates the local SQLite schema used as the development fallback store.
+ */
 export function migrate(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS content_items (
@@ -81,6 +90,9 @@ export function migrate(db) {
   ensureColumn(db, 'content_items', 'notion_synced_at', 'TEXT');
 }
 
+/**
+ * Appends an audit event for a content item or system-level operation.
+ */
 export function insertEvent(db, { contentItemId = null, eventType, payload = {} }) {
   db.prepare(`
     INSERT INTO events (content_item_id, event_type, payload_json, created_at)
@@ -88,6 +100,9 @@ export function insertEvent(db, { contentItemId = null, eventType, payload = {} 
   `).run(contentItemId, eventType, JSON.stringify(payload), nowIso());
 }
 
+/**
+ * Inserts a new content item in collected state and records its creation event.
+ */
 export function insertContentItem(db, input) {
   const id = input.id || createId('content');
   const createdAt = nowIso();
@@ -128,14 +143,23 @@ export function insertContentItem(db, input) {
   return getContentItem(db, id);
 }
 
+/**
+ * Loads one content item by ID from the local SQLite store.
+ */
 export function getContentItem(db, id) {
   return db.prepare('SELECT * FROM content_items WHERE id = ?').get(id) || null;
 }
 
+/**
+ * Loads one content item by source fingerprint for duplicate detection.
+ */
 export function getContentItemByFingerprint(db, sourceFingerprint) {
   return db.prepare('SELECT * FROM content_items WHERE source_fingerprint = ?').get(sourceFingerprint) || null;
 }
 
+/**
+ * Lists content items in one lifecycle status ordered by creation time.
+ */
 export function listContentItemsByStatus(db, status, { limit = 10 } = {}) {
   return db.prepare(`
     SELECT *
@@ -146,6 +170,9 @@ export function listContentItemsByStatus(db, status, { limit = 10 } = {}) {
   `).all(status, limit);
 }
 
+/**
+ * Lists content items that should be mirrored or refreshed in Notion.
+ */
 export function listContentItemsForNotionSync(db, { limit = 10 } = {}) {
   return db.prepare(`
     SELECT *
@@ -157,6 +184,9 @@ export function listContentItemsForNotionSync(db, { limit = 10 } = {}) {
   `).all(limit);
 }
 
+/**
+ * Stores draft fields and advances the local content row to draft_created.
+ */
 export function updateContentDraft(db, { id, draftTitle, draftBody, status, eventType, payload = {} }) {
   const updatedAt = nowIso();
 
@@ -183,6 +213,9 @@ export function updateContentDraft(db, { id, draftTitle, draftBody, status, even
   return getContentItem(db, id);
 }
 
+/**
+ * Stores Discord review request metadata and advances the row to pending_review.
+ */
 export function updateReviewRequest(db, { id, reviewMessageId, status, eventType, payload = {} }) {
   const updatedAt = nowIso();
 
@@ -209,6 +242,9 @@ export function updateReviewRequest(db, { id, reviewMessageId, status, eventType
   return getContentItem(db, id);
 }
 
+/**
+ * Stores approval or rejection metadata for a reviewed content item.
+ */
 export function updateReviewDecision(db, { id, status, rejectionReason = '', eventType, payload = {} }) {
   const updatedAt = nowIso();
 
@@ -235,6 +271,9 @@ export function updateReviewDecision(db, { id, status, rejectionReason = '', eve
   return getContentItem(db, id);
 }
 
+/**
+ * Inserts or replaces the channel-specific payload for one content item.
+ */
 export function upsertChannelOutput(
   db,
   {
@@ -291,6 +330,9 @@ export function upsertChannelOutput(
   `).get(contentItemId, channelId);
 }
 
+/**
+ * Finds generated channel outputs whose content item is ready for local rendering.
+ */
 export function listChannelOutputsReadyToRender(db, { channelId, limit = 10 } = {}) {
   return db.prepare(`
     SELECT
@@ -311,6 +353,9 @@ export function listChannelOutputsReadyToRender(db, { channelId, limit = 10 } = 
   `).all(channelId, CHANNEL_STATUSES.GENERATED, CONTENT_STATUSES.CHANNEL_GENERATED, limit);
 }
 
+/**
+ * Finds rendered and uploaded channel outputs that are ready for external publishing.
+ */
 export function listChannelOutputsReadyToPublish(db, { channelId, limit = 10 } = {}) {
   return db.prepare(`
     SELECT
@@ -331,6 +376,9 @@ export function listChannelOutputsReadyToPublish(db, { channelId, limit = 10 } =
   `).all(channelId, CHANNEL_STATUSES.PUBLISH_PENDING, CONTENT_STATUSES.PUBLISH_PENDING, limit);
 }
 
+/**
+ * Stores a local or public artifact path on a channel output.
+ */
 export function updateChannelOutputArtifact(db, { id, status, artifactPath }) {
   const updatedAt = nowIso();
 
@@ -350,6 +398,9 @@ export function updateChannelOutputArtifact(db, { id, status, artifactPath }) {
   return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
 }
 
+/**
+ * Stores the external published URL for a channel output.
+ */
 export function updateChannelOutputPublished(db, { id, status, publishedUrl }) {
   const updatedAt = nowIso();
 
@@ -369,6 +420,9 @@ export function updateChannelOutputPublished(db, { id, status, publishedUrl }) {
   return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
 }
 
+/**
+ * Updates only the content lifecycle status and records the transition event.
+ */
 export function updateContentStatus(db, { id, status, eventType, payload = {} }) {
   const updatedAt = nowIso();
 
@@ -391,6 +445,9 @@ export function updateContentStatus(db, { id, status, eventType, payload = {} })
   return getContentItem(db, id);
 }
 
+/**
+ * Stores Notion sync metadata on a content item.
+ */
 export function updateContentNotionSync(db, { id, notionPageId, eventType, payload = {} }) {
   const updatedAt = nowIso();
 
@@ -414,6 +471,9 @@ export function updateContentNotionSync(db, { id, notionPageId, eventType, paylo
   return getContentItem(db, id);
 }
 
+/**
+ * Builds a local database summary used by the status command.
+ */
 export function summarize(db) {
   const contentByStatus = db.prepare(`
     SELECT status, COUNT(*) AS count

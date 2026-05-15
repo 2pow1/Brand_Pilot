@@ -1,8 +1,14 @@
+/**
+ * Keeps Discord message fields under platform limits while preserving readable text.
+ */
 function truncate(value, maxLength) {
   if (!value || value.length <= maxLength) return value || '';
   return `${value.slice(0, maxLength - 1)}…`;
 }
 
+/**
+ * Builds the human-facing Discord review message body for one draft.
+ */
 export function buildReviewContent(item) {
   const parts = [
     `검수 요청: ${item.draft_title || item.source_title}`,
@@ -21,6 +27,9 @@ export function buildReviewContent(item) {
   return truncate(parts.join('\n'), 1900);
 }
 
+/**
+ * Builds Discord approval and rejection buttons with stable content IDs in custom_id values.
+ */
 export function buildReviewComponents(contentItemId) {
   return [
     {
@@ -43,6 +52,9 @@ export function buildReviewComponents(contentItemId) {
   ];
 }
 
+/**
+ * Creates the complete Discord message payload sent to the review channel.
+ */
 export function buildReviewPayload(item) {
   return {
     content: buildReviewContent(item),

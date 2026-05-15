@@ -6,6 +6,9 @@ import { openDatabaseStore } from './database/index.js';
 import { fingerprint } from './ids.js';
 import { CONTENT_STATUSES, contentTransitions } from './state.js';
 
+/**
+ * Prints the available CLI commands and arguments.
+ */
 function printUsage() {
   console.log(`Brand Pilot CLI
 
@@ -28,6 +31,9 @@ Usage:
 `);
 }
 
+/**
+ * Parses shared boolean and limit options used by pipeline commands.
+ */
 function parseOptions(argv) {
   const options = {
     dryRun: false,
@@ -57,27 +63,42 @@ function parseOptions(argv) {
   return options;
 }
 
+/**
+ * Opens the configured app store and returns it with loaded runtime config.
+ */
 async function openAppDatabase() {
   const config = loadConfig();
   const store = await openDatabaseStore(config);
   return { store, config };
 }
 
+/**
+ * Prints structured command output as formatted JSON.
+ */
 function printSummary(summary) {
   console.log(JSON.stringify(summary, null, 2));
 }
 
+/**
+ * Prints which database provider and location are active for the current command.
+ */
 function printDatabaseInfo(store) {
   console.log(`Database provider: ${store.label}`);
   console.log(`Database: ${store.location}`);
 }
 
+/**
+ * Initializes the configured database provider and verifies it can be opened.
+ */
 async function runInit() {
   const { store } = await openAppDatabase();
   printDatabaseInfo(store);
   await store.close();
 }
 
+/**
+ * Prints the current pipeline state summary.
+ */
 async function runStatus() {
   const { store } = await openAppDatabase();
   printDatabaseInfo(store);
@@ -85,6 +106,9 @@ async function runStatus() {
   await store.close();
 }
 
+/**
+ * Creates a local sample content row and moves it to pending review for wiring tests.
+ */
 async function runSample() {
   const { createCollectedContent, transitionContent } = await import('./repository.js');
   const { store } = await openAppDatabase();
@@ -115,6 +139,9 @@ async function runSample() {
   await store.close();
 }
 
+/**
+ * Collects source candidates and optionally stores new ones in the configured database.
+ */
 async function runCollect(argv) {
   const options = parseOptions(argv);
   const { collectSources } = await import('./collect/index.js');
@@ -159,6 +186,9 @@ async function runCollect(argv) {
   await store.close();
 }
 
+/**
+ * Creates common drafts for collected content using mock or OpenAI-backed generation.
+ */
 async function runDraft(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -212,6 +242,9 @@ async function runDraft(argv) {
   await store.close();
 }
 
+/**
+ * Sends or mocks Discord review requests for draft_created content.
+ */
 async function runReviewRequest(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -265,6 +298,9 @@ async function runReviewRequest(argv) {
   await store.close();
 }
 
+/**
+ * Applies a manual approval or rejection decision from the CLI.
+ */
 async function runReviewDecision(action, argv) {
   const contentId = argv[0];
   if (!contentId) {
@@ -295,6 +331,9 @@ async function runReviewDecision(action, argv) {
   await store.close();
 }
 
+/**
+ * Dispatches review subcommands.
+ */
 async function runReview(argv) {
   const action = argv[0];
 
@@ -307,6 +346,9 @@ async function runReview(argv) {
   }
 }
 
+/**
+ * Generates channel-specific payloads for approved content items.
+ */
 async function runChannelGenerate(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -363,6 +405,9 @@ async function runChannelGenerate(argv) {
   await store.close();
 }
 
+/**
+ * Dispatches channel subcommands.
+ */
 async function runChannel(argv) {
   const action = argv[0];
 
@@ -373,6 +418,9 @@ async function runChannel(argv) {
   }
 }
 
+/**
+ * Renders Instagram card-news payloads into local PNG artifacts.
+ */
 async function runInstagramRender(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -429,6 +477,9 @@ async function runInstagramRender(argv) {
   await store.close();
 }
 
+/**
+ * Publishes ready Instagram artifacts through the Meta Graph API or mock publisher.
+ */
 async function runInstagramPublish(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -492,6 +543,9 @@ async function runInstagramPublish(argv) {
   await store.close();
 }
 
+/**
+ * Uploads rendered Instagram artifacts to Supabase Storage public URLs.
+ */
 async function runInstagramUpload(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -563,6 +617,9 @@ async function runInstagramUpload(argv) {
   await store.close();
 }
 
+/**
+ * Dispatches Instagram subcommands.
+ */
 async function runInstagram(argv) {
   const action = argv[0];
 
@@ -577,6 +634,9 @@ async function runInstagram(argv) {
   }
 }
 
+/**
+ * Creates or updates Notion mirror pages for recent content items.
+ */
 async function runNotionSync(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
@@ -629,6 +689,9 @@ async function runNotionSync(argv) {
   await store.close();
 }
 
+/**
+ * Dispatches Notion subcommands.
+ */
 async function runNotion(argv) {
   const action = argv[0];
 
@@ -639,10 +702,16 @@ async function runNotion(argv) {
   }
 }
 
+/**
+ * Prints the allowed content status transition table.
+ */
 function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
 
+/**
+ * Runs configuration preflight checks for scheduled automation or publishing.
+ */
 async function runDoctor(argv) {
   const target = argv[0] || 'schedule';
   if (argv.length > 1) {
@@ -663,6 +732,9 @@ async function runDoctor(argv) {
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
+/**
+ * Dispatches the top-level CLI command.
+ */
 async function main() {
   if (command === 'init') await runInit();
   else if (command === 'status') await runStatus();

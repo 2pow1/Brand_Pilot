@@ -11,10 +11,16 @@ const ARTICLE_PATH_HINTS = [
   'strategy'
 ];
 
+/**
+ * Normalizes scraped text so titles and excerpts compare consistently.
+ */
 function normalizeWhitespace(value) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Decodes the small HTML entity set needed by source titles, URLs, and excerpts.
+ */
 function decodeHtml(value) {
   return value
     .replaceAll('&amp;', '&')
@@ -25,15 +31,24 @@ function decodeHtml(value) {
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)));
 }
 
+/**
+ * Removes HTML tags from anchor text and returns plain text.
+ */
 function stripTags(value) {
   return normalizeWhitespace(decodeHtml(value.replace(/<[^>]*>/g, ' ')));
 }
 
+/**
+ * Extracts a named attribute from a raw HTML tag string.
+ */
 function getAttr(tag, attrName) {
   const pattern = new RegExp(`${attrName}\\s*=\\s*["']([^"']+)["']`, 'i');
   return tag.match(pattern)?.[1] || '';
 }
 
+/**
+ * Resolves relative source links against the source page URL.
+ */
 function toAbsoluteUrl(url, baseUrl) {
   try {
     return new URL(decodeHtml(url), baseUrl).toString();
@@ -42,6 +57,9 @@ function toAbsoluteUrl(url, baseUrl) {
   }
 }
 
+/**
+ * Checks whether a candidate URL is publishable HTTP(S) content.
+ */
 function isHttpUrl(url) {
   try {
     const parsed = new URL(url);
@@ -51,10 +69,16 @@ function isHttpUrl(url) {
   }
 }
 
+/**
+ * Removes trailing slashes so listing URLs can be compared reliably.
+ */
 function withoutTrailingSlash(url) {
   return url.replace(/\/+$/, '');
 }
 
+/**
+ * Filters out home, category, tag, archive, and author pages from candidate lists.
+ */
 function isListingOrTaxonomyUrl(url, baseUrl) {
   const parsed = new URL(url);
   const path = parsed.pathname.toLowerCase();
@@ -74,6 +98,9 @@ function isListingOrTaxonomyUrl(url, baseUrl) {
   ].some((segment) => path.includes(segment));
 }
 
+/**
+ * Checks whether a candidate came from the same origin as the configured source.
+ */
 function sameOrigin(url, baseUrl) {
   try {
     return new URL(url).origin === new URL(baseUrl).origin;
@@ -82,6 +109,9 @@ function sameOrigin(url, baseUrl) {
   }
 }
 
+/**
+ * Scores candidates so article-like source URLs sort ahead of navigation links.
+ */
 function scoreCandidate(candidate, baseUrl) {
   let score = 0;
 
@@ -96,6 +126,9 @@ function scoreCandidate(candidate, baseUrl) {
   return score;
 }
 
+/**
+ * Converts raw scraped fields into a validated candidate or rejects unusable rows.
+ */
 function normalizeCandidate(candidate, baseUrl) {
   const url = toAbsoluteUrl(candidate.url || '', baseUrl);
   const title = normalizeWhitespace(candidate.title || '');
@@ -112,6 +145,9 @@ function normalizeCandidate(candidate, baseUrl) {
   };
 }
 
+/**
+ * Flattens JSON-LD graphs and item lists into records that can be inspected as articles.
+ */
 function flattenJsonLd(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value.flatMap(flattenJsonLd);
@@ -125,15 +161,24 @@ function flattenJsonLd(value) {
   return [value, ...nested];
 }
 
+/**
+ * Treats scalar JSON-LD values as arrays so type checks can be uniform.
+ */
 function asArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+/**
+ * Checks whether a JSON-LD record declares an article-like schema type.
+ */
 function jsonLdTypeMatches(value) {
   const types = asArray(value['@type'] || []);
   return types.some((type) => ARTICLE_TYPES.has(type));
 }
 
+/**
+ * Extracts article candidates from JSON-LD metadata blocks when a source provides them.
+ */
 function extractJsonLdCandidates(html, baseUrl) {
   const candidates = [];
   const pattern = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -163,6 +208,9 @@ function extractJsonLdCandidates(html, baseUrl) {
   return candidates;
 }
 
+/**
+ * Extracts article candidates from anchor tags as a fallback for pages without JSON-LD.
+ */
 function extractAnchorCandidates(html, baseUrl) {
   const candidates = [];
   const pattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
@@ -186,6 +234,9 @@ function extractAnchorCandidates(html, baseUrl) {
   return candidates;
 }
 
+/**
+ * Keeps the best-scored candidate for each URL after merging extraction strategies.
+ */
 function dedupeCandidates(candidates) {
   const byUrl = new Map();
 
@@ -199,6 +250,9 @@ function dedupeCandidates(candidates) {
   return [...byUrl.values()];
 }
 
+/**
+ * Produces the final ranked candidate list from a source page's HTML.
+ */
 export function extractCandidatesFromHtml(html, { baseUrl, maxCandidates = 10 } = {}) {
   if (!baseUrl) throw new Error('baseUrl is required');
 

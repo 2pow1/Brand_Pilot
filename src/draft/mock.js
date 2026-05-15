@@ -1,3 +1,6 @@
+/**
+ * Creates deterministic local draft content for pipeline tests without calling OpenAI.
+ */
 export function createMockDraft({ brand, item }) {
   const companyName = brand.companyName || 'Client Company';
   const ctaLabel = brand.cta?.label || '상담 채널 확인하기';

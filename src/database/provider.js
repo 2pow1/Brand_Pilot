@@ -3,6 +3,9 @@ const PROVIDERS = {
   SUPABASE: 'supabase'
 };
 
+/**
+ * Describes the configured database provider and whether it is the operational source of truth.
+ */
 export function describeDatabaseProvider(config) {
   if (config.databaseProvider === PROVIDERS.SQLITE) {
     return {

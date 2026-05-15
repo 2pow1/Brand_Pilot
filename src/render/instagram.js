@@ -2,6 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+/**
+ * Computes the renderer input, script, and output paths for a content item.
+ */
 export function buildInstagramRenderPaths({ cwd, contentItemId }) {
   const outputDir = resolve(cwd, 'artifacts/generated/instagram', contentItemId);
   const inputJsonPath = resolve(cwd, 'tmp/render', `${contentItemId}-instagram.json`);
@@ -14,6 +17,9 @@ export function buildInstagramRenderPaths({ cwd, contentItemId }) {
   };
 }
 
+/**
+ * Runs the PowerShell card-news renderer and returns generated slide metadata.
+ */
 export function renderInstagramCardNews({ cwd, contentItemId, payload }) {
   const paths = buildInstagramRenderPaths({ cwd, contentItemId });
   mkdirSync(paths.outputDir, { recursive: true });

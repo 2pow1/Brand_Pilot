@@ -12,6 +12,9 @@ const DEFAULT_META_GRAPH_BASE_URL = 'https://graph.facebook.com/v25.0';
 const DEFAULT_NOTION_BASE_URL = 'https://api.notion.com/v1';
 const DEFAULT_NOTION_VERSION = '2026-03-11';
 
+/**
+ * Parses simple KEY=value lines from a local .env file.
+ */
 function parseDotEnv(content) {
   const values = {};
 
@@ -38,6 +41,9 @@ function parseDotEnv(content) {
   return values;
 }
 
+/**
+ * Loads the optional local .env file for CLI runs.
+ */
 function loadDotEnv(cwd) {
   const path = resolve(cwd, '.env');
   if (!existsSync(path)) return {};
@@ -45,6 +51,9 @@ function loadDotEnv(cwd) {
   return parseDotEnv(readFileSync(path, 'utf8'));
 }
 
+/**
+ * Merges local .env values and process environment into the runtime configuration object.
+ */
 export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
   const dotEnv = loadDotEnv(cwd);
   const merged = { ...dotEnv, ...env };
@@ -79,16 +88,25 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
   };
 }
 
+/**
+ * Reads a JSON configuration file from disk.
+ */
 export function loadJsonConfig(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+/**
+ * Loads the real brand config when present, otherwise falls back to the example config.
+ */
 export function loadBrandConfig(cwd = process.cwd()) {
   const brandPath = resolve(cwd, 'config/brand.json');
   const examplePath = resolve(cwd, 'config/brand.example.json');
   return loadJsonConfig(existsSync(brandPath) ? brandPath : examplePath);
 }
 
+/**
+ * Converts the local SQLite file URL into an absolute filesystem path.
+ */
 export function databasePathFromUrl(databaseUrl, cwd = process.cwd()) {
   if (!databaseUrl.startsWith('file:')) {
     throw new Error(`Only file: DATABASE_URL values are supported for the MVP. Received: ${databaseUrl}`);

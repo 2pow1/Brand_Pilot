@@ -1,6 +1,9 @@
 import { fetchHtml as defaultFetchHtml } from './fetch.js';
 import { extractCandidatesFromHtml } from './html.js';
 
+/**
+ * Fetches one configured source and returns normalized content candidates for storage.
+ */
 export async function collectSource(source, options = {}) {
   const fetchHtml = options.fetchHtml || defaultFetchHtml;
   const maxCandidates = options.maxCandidatesPerSource || 10;
@@ -20,6 +23,9 @@ export async function collectSource(source, options = {}) {
   }));
 }
 
+/**
+ * Applies per-source include and exclude path hints to keep only likely article URLs.
+ */
 function applySourcePathRules(candidates, source) {
   const includePathHints = source.includePathHints || [];
   const excludePathHints = source.excludePathHints || [];
@@ -35,6 +41,9 @@ function applySourcePathRules(candidates, source) {
   });
 }
 
+/**
+ * Collects candidates from all enabled sources while preserving per-source failures.
+ */
 export async function collectSources(sources, options = {}) {
   const enabledSources = sources.filter((source) => source.enabled);
   const results = [];

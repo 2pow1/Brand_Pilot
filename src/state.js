@@ -33,6 +33,9 @@ const ALLOWED_CONTENT_TRANSITIONS = Object.freeze({
   [CONTENT_STATUSES.FAILED]: new Set([])
 });
 
+/**
+ * Ensures content only moves through the allowed lifecycle transitions.
+ */
 export function assertContentTransition(fromStatus, toStatus) {
   const allowed = ALLOWED_CONTENT_TRANSITIONS[fromStatus];
   if (!allowed) {
@@ -44,6 +47,9 @@ export function assertContentTransition(fromStatus, toStatus) {
   }
 }
 
+/**
+ * Exposes allowed status transitions for CLI inspection and documentation.
+ */
 export function contentTransitions() {
   return Object.fromEntries(
     Object.entries(ALLOWED_CONTENT_TRANSITIONS).map(([status, next]) => [status, [...next]])
