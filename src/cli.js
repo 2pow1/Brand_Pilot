@@ -18,6 +18,7 @@ Usage:
   node src/cli.js sample
   node src/cli.js collect [--dry-run] [--limit <n>]
   node src/cli.js draft [--mock] [--limit <n>]
+  node src/cli.js review check
   node src/cli.js review request [--mock] [--limit <n>]
   node src/cli.js review approve <content-id>
   node src/cli.js review reject <content-id> [reason]
@@ -26,7 +27,7 @@ Usage:
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
   node src/cli.js notion sync [--limit <n>]
-  node src/cli.js doctor [schedule|publish]
+  node src/cli.js doctor [schedule|discord|publish]
   node src/cli.js transitions
 `);
 }
@@ -299,6 +300,31 @@ async function runReviewRequest(argv) {
 }
 
 /**
+ * Checks whether the configured Discord bot can see the review channel.
+ */
+async function runReviewCheck() {
+  const config = loadConfig();
+  const { checkDiscordReviewTarget, formatDiscordReviewError } = await import('./review/discord.js');
+
+  try {
+    const result = await checkDiscordReviewTarget({ config });
+
+    console.log(JSON.stringify({
+      ok: true,
+      botId: result.botId,
+      botUsername: result.botUsername,
+      channelId: result.channelId,
+      guildId: result.guildId,
+      channelName: result.channelName,
+      channelType: result.channelType
+    }, null, 2));
+  } catch (error) {
+    console.error(formatDiscordReviewError(error));
+    process.exitCode = 1;
+  }
+}
+
+/**
  * Applies a manual approval or rejection decision from the CLI.
  */
 async function runReviewDecision(action, argv) {
@@ -337,12 +363,14 @@ async function runReviewDecision(action, argv) {
 async function runReview(argv) {
   const action = argv[0];
 
-  if (action === 'request') {
+  if (action === 'check') {
+    await runReviewCheck();
+  } else if (action === 'request') {
     await runReviewRequest(argv.slice(1));
   } else if (action === 'approve' || action === 'reject') {
     await runReviewDecision(action, argv.slice(1));
   } else {
-    throw new Error('review command must be one of: request, approve, reject');
+    throw new Error('review command must be one of: check, request, approve, reject');
   }
 }
 
@@ -715,7 +743,7 @@ function runTransitions() {
 async function runDoctor(argv) {
   const target = argv[0] || 'schedule';
   if (argv.length > 1) {
-    throw new Error('doctor command accepts at most one target: schedule or publish');
+    throw new Error('doctor command accepts at most one target: schedule, discord, or publish');
   }
 
   const config = loadConfig();

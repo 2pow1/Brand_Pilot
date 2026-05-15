@@ -9,6 +9,11 @@ const DISCORD_MESSAGE_FLAGS = {
   EPHEMERAL: 64
 } as const;
 
+type ReviewDecision = 'approve' | 'reject';
+
+/**
+ * Reads a required Supabase Edge Function secret.
+ */
 function getRequiredEnv(name: string): string {
   const value = Deno.env.get(name);
   if (!value) {
@@ -17,6 +22,9 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+/**
+ * Converts Discord's hex-encoded signature and public key into bytes for verification.
+ */
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let index = 0; index < bytes.length; index += 1) {
@@ -25,6 +33,9 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
+/**
+ * Builds the JSON response shape Discord expects from an interaction endpoint.
+ */
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
     ...init,
@@ -35,6 +46,9 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
   });
 }
 
+/**
+ * Verifies Discord's Ed25519 request signature before trusting interaction payloads.
+ */
 function verifyDiscordSignature(request: Request, body: string) {
   const publicKey = getRequiredEnv('DISCORD_PUBLIC_KEY');
   const signature = request.headers.get('x-signature-ed25519') || '';
@@ -52,6 +66,9 @@ function verifyDiscordSignature(request: Request, body: string) {
   }
 }
 
+/**
+ * Sends one authenticated request to Supabase REST from the Edge Function runtime.
+ */
 async function supabaseRequest(path: string, init: RequestInit = {}) {
   const supabaseUrl = getRequiredEnv('SUPABASE_URL').replace(/\/+$/, '');
   const serviceRoleKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -74,6 +91,9 @@ async function supabaseRequest(path: string, init: RequestInit = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+/**
+ * Loads the content item referenced by a Discord button custom_id.
+ */
 async function getContentItem(contentItemId: string) {
   const rows = await supabaseRequest(
     `content_items?select=*&id=eq.${encodeURIComponent(contentItemId)}&limit=1`
@@ -81,6 +101,9 @@ async function getContentItem(contentItemId: string) {
   return rows[0] || null;
 }
 
+/**
+ * Appends a review event after applying an interaction decision.
+ */
 async function insertEvent(contentItemId: string, eventType: string, payload: Record<string, unknown>) {
   await supabaseRequest('events', {
     method: 'POST',
@@ -95,7 +118,10 @@ async function insertEvent(contentItemId: string, eventType: string, payload: Re
   });
 }
 
-async function applyDecision(contentItemId: string, decision: 'approve' | 'reject') {
+/**
+ * Applies an approve or reject decision only when the item is still pending review.
+ */
+async function applyDecision(contentItemId: string, decision: ReviewDecision) {
   const item = await getContentItem(contentItemId);
 
   if (!item) {
@@ -138,6 +164,21 @@ async function applyDecision(contentItemId: string, decision: 'approve' | 'rejec
   };
 }
 
+/**
+ * Parses Brand Pilot button IDs and rejects unknown actions without changing content state.
+ */
+function parseReviewButton(customId: string): { decision: ReviewDecision; contentItemId: string } | null {
+  const [namespace, action, contentItemId] = customId.split(':');
+  if (namespace !== 'brandpilot') return null;
+  if (action !== 'approve' && action !== 'reject') return null;
+  if (!contentItemId) return null;
+
+  return {
+    decision: action,
+    contentItemId
+  };
+}
+
 Deno.serve(async (request) => {
   try {
     const body = await request.text();
@@ -148,10 +189,8 @@ Deno.serve(async (request) => {
       return jsonResponse({ type: DISCORD_RESPONSE_TYPES.PONG });
     }
 
-    const customId = interaction.data?.custom_id || '';
-    const [, action, contentItemId] = customId.split(':');
-
-    if (!customId.startsWith('brandpilot:') || !contentItemId) {
+    const parsed = parseReviewButton(interaction.data?.custom_id || '');
+    if (!parsed) {
       return jsonResponse({
         type: DISCORD_RESPONSE_TYPES.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
@@ -161,9 +200,8 @@ Deno.serve(async (request) => {
       });
     }
 
-    const decision = action === 'approve' ? 'approve' : 'reject';
-    const result = await applyDecision(contentItemId, decision);
-    const label = decision === 'approve' ? '승인' : '거절';
+    const result = await applyDecision(parsed.contentItemId, parsed.decision);
+    const label = parsed.decision === 'approve' ? '승인' : '거절';
     const content = result.changed
       ? `${label} 처리했습니다.`
       : `이미 ${result.status} 상태라 변경하지 않았습니다.`;

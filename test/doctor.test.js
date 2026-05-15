@@ -57,3 +57,16 @@ test('reports publish configuration separately from scheduled pipeline configura
   assert.equal(report.ok, false);
   assert.deepEqual(report.missing, ['META_ACCESS_TOKEN', 'INSTAGRAM_BUSINESS_ACCOUNT_ID']);
 });
+
+test('reports Discord interaction configuration separately from schedule checks', () => {
+  const report = buildDoctorReport({
+    discordBotToken: 'discord-token',
+    discordReviewChannelId: 'review-channel',
+    discordPublicKey: '',
+    supabaseUrl: 'https://project.supabase.co',
+    supabaseServiceRoleKey: 'service-role-key'
+  }, 'discord');
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.missing, ['DISCORD_PUBLIC_KEY']);
+});

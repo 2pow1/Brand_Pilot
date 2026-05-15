@@ -3,7 +3,7 @@
  */
 function truncate(value, maxLength) {
   if (!value || value.length <= maxLength) return value || '';
-  return `${value.slice(0, maxLength - 1)}…`;
+  return `${value.slice(0, maxLength - 3)}...`;
 }
 
 /**
@@ -21,7 +21,7 @@ export function buildReviewContent(item) {
     truncate(item.draft_body || '(초안 본문 없음)', 1200),
     '',
     '승인하면 채널별 콘텐츠 생성 단계로 넘어갑니다.',
-    '거절하면 해당 초안은 종료되고 다음 후보 검수로 넘어갑니다.'
+    '거절하면 해당 초안은 종료되고 다음 후보 검토로 넘어갑니다.'
   ];
 
   return truncate(parts.join('\n'), 1900);

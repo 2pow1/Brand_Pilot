@@ -1,5 +1,6 @@
 const TARGETS = Object.freeze({
   SCHEDULE: 'schedule',
+  DISCORD: 'discord',
   PUBLISH: 'publish'
 });
 
@@ -45,6 +46,33 @@ const CHECKS = Object.freeze({
       name: 'NOTION_DATA_SOURCE_ID',
       key: 'notionDataSourceId',
       message: 'Required for the scheduled Notion mirror sync step.'
+    }
+  ],
+  [TARGETS.DISCORD]: [
+    {
+      name: 'DISCORD_BOT_TOKEN',
+      key: 'discordBotToken',
+      message: 'Required for sending review requests to Discord.'
+    },
+    {
+      name: 'DISCORD_REVIEW_CHANNEL_ID',
+      key: 'discordReviewChannelId',
+      message: 'Required for choosing the Discord review channel.'
+    },
+    {
+      name: 'DISCORD_PUBLIC_KEY',
+      key: 'discordPublicKey',
+      message: 'Required for verifying Discord button interaction signatures.'
+    },
+    {
+      name: 'SUPABASE_URL',
+      key: 'supabaseUrl',
+      message: 'Required by the Discord interaction Edge Function.'
+    },
+    {
+      name: 'SUPABASE_SERVICE_ROLE_KEY',
+      key: 'supabaseServiceRoleKey',
+      message: 'Required by the Discord interaction Edge Function.'
     }
   ],
   [TARGETS.PUBLISH]: [
