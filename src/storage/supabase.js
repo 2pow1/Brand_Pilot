@@ -2,7 +2,7 @@ import { basename, join } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 
 const MIME_TYPES = Object.freeze({
-  '.json': 'application/json; charset=utf-8',
+  '.json': 'application/json',
   '.png': 'image/png'
 });
 
@@ -56,9 +56,11 @@ function readManifest(artifactPath) {
     throw new Error(`Rendered manifest not found: ${manifestPath}`);
   }
 
+  const manifestText = readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, '');
+
   return {
     manifestPath,
-    manifest: JSON.parse(readFileSync(manifestPath, 'utf8'))
+    manifest: JSON.parse(manifestText)
   };
 }
 
@@ -169,7 +171,7 @@ export async function uploadInstagramRenderArtifact({ config, row, payload, fetc
     bucket,
     objectPath: manifestObjectPath,
     body: Buffer.from(JSON.stringify(publicManifest, null, 2), 'utf8'),
-    contentType: 'application/json; charset=utf-8',
+    contentType: 'application/json',
     fetchImpl
   });
 

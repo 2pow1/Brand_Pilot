@@ -10,7 +10,7 @@ const config = {
   supabaseStorageBucket: 'brand-pilot-instagram'
 };
 
-function createRenderedArtifact() {
+function createRenderedArtifact({ manifestPrefix = '' } = {}) {
   mkdirSync(resolve(process.cwd(), 'tmp'), { recursive: true });
   const dir = mkdtempSync(resolve(process.cwd(), 'tmp/storage-upload-'));
   const slideOne = join(dir, 'slide-01.png');
@@ -19,7 +19,7 @@ function createRenderedArtifact() {
   writeFileSync(slideTwo, Buffer.from('png-two'));
   writeFileSync(
     join(dir, 'manifest.json'),
-    JSON.stringify({
+    `${manifestPrefix}${JSON.stringify({
       caption: 'Caption',
       hashtags: ['#brand'],
       slides: [slideOne, slideTwo],
@@ -27,7 +27,7 @@ function createRenderedArtifact() {
         title: 'Source title',
         url: 'https://example.com'
       }
-    })
+    })}`
   );
 
   return dir;
@@ -71,10 +71,32 @@ test('uploads rendered Instagram slides and a public manifest to Supabase Storag
   assert.equal(calls[0].headers.Authorization, 'Bearer service-role-key');
   assert.equal(calls[0].headers['x-upsert'], 'true');
   assert.equal(calls[0].headers['Content-Type'], 'image/png');
-  assert.equal(calls[2].headers['Content-Type'], 'application/json; charset=utf-8');
+  assert.equal(calls[2].headers['Content-Type'], 'application/json');
 
   const uploadedManifest = JSON.parse(Buffer.from(calls[2].body).toString('utf8'));
   assert.equal(uploadedManifest.slides[0].publicUrl, result.slides[0].publicUrl);
+});
+
+test('uploads a rendered manifest with a UTF-8 BOM', async () => {
+  const artifactPath = createRenderedArtifact({ manifestPrefix: '\uFEFF' });
+  const calls = [];
+  const result = await uploadInstagramRenderArtifact({
+    config,
+    row: {
+      id: 'content_bom',
+      channel_output_id: 'channel_bom',
+      channel_artifact_path: artifactPath
+    },
+    payload: {},
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return Response.json({});
+    }
+  });
+
+  assert.equal(result.uploaded, true);
+  assert.equal(result.slides.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('skips upload when the artifact path is already public', async () => {
