@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: read
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       DATABASE_PROVIDER: supabase
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -38,6 +39,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Verify scheduled pipeline configuration
+        run: node --no-warnings=ExperimentalWarning src/cli.js doctor schedule
 
       - name: Show status
         run: node --no-warnings=ExperimentalWarning src/cli.js status

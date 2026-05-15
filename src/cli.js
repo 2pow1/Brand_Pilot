@@ -23,6 +23,7 @@ Usage:
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
   node src/cli.js notion sync [--limit <n>]
+  node src/cli.js doctor [schedule|publish]
   node src/cli.js transitions
 `);
 }
@@ -642,6 +643,23 @@ function runTransitions() {
   console.log(JSON.stringify(contentTransitions(), null, 2));
 }
 
+async function runDoctor(argv) {
+  const target = argv[0] || 'schedule';
+  if (argv.length > 1) {
+    throw new Error('doctor command accepts at most one target: schedule or publish');
+  }
+
+  const config = loadConfig();
+  const { buildDoctorReport, formatDoctorReport } = await import('./doctor.js');
+  const report = buildDoctorReport(config, target);
+
+  console.log(formatDoctorReport(report));
+
+  if (!report.ok) {
+    process.exitCode = 1;
+  }
+}
+
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
@@ -655,6 +673,7 @@ async function main() {
   else if (command === 'channel') await runChannel(args);
   else if (command === 'instagram') await runInstagram(args);
   else if (command === 'notion') await runNotion(args);
+  else if (command === 'doctor') await runDoctor(args);
   else if (command === 'transitions') runTransitions();
   else {
     printUsage();
