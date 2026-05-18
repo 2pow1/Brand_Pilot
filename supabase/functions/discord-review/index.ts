@@ -12,6 +12,16 @@ const DISCORD_MESSAGE_FLAGS = {
 type ReviewDecision = 'approve' | 'reject';
 
 /**
+ * Marks requests that failed Discord's required signature verification.
+ */
+class DiscordSignatureError extends Error {
+  constructor(message = 'Invalid Discord signature') {
+    super(message);
+    this.name = 'DiscordSignatureError';
+  }
+}
+
+/**
  * Reads a required Supabase Edge Function secret.
  */
 function getRequiredEnv(name: string): string {
@@ -26,6 +36,10 @@ function getRequiredEnv(name: string): string {
  * Converts Discord's hex-encoded signature and public key into bytes for verification.
  */
 function hexToBytes(hex: string): Uint8Array {
+  if (!hex || hex.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
+    throw new DiscordSignatureError();
+  }
+
   const bytes = new Uint8Array(hex.length / 2);
   for (let index = 0; index < bytes.length; index += 1) {
     bytes[index] = parseInt(hex.slice(index * 2, index * 2 + 2), 16);
@@ -55,14 +69,19 @@ function verifyDiscordSignature(request: Request, body: string) {
   const timestamp = request.headers.get('x-signature-timestamp') || '';
   const message = new TextEncoder().encode(`${timestamp}${body}`);
 
-  const valid = nacl.sign.detached.verify(
-    message,
-    hexToBytes(signature),
-    hexToBytes(publicKey)
-  );
+  let valid = false;
+  try {
+    valid = nacl.sign.detached.verify(
+      message,
+      hexToBytes(signature),
+      hexToBytes(publicKey)
+    );
+  } catch {
+    throw new DiscordSignatureError();
+  }
 
   if (!valid) {
-    throw new Error('Invalid Discord signature');
+    throw new DiscordSignatureError();
   }
 }
 
@@ -215,7 +234,10 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     console.error(error);
-    const status = error instanceof Error && error.message === 'Invalid Discord signature' ? 401 : 200;
+    if (error instanceof DiscordSignatureError) {
+      return jsonResponse({ message: 'Invalid Discord signature' }, { status: 401 });
+    }
+
     return jsonResponse(
       {
         type: DISCORD_RESPONSE_TYPES.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -223,8 +245,7 @@ Deno.serve(async (request) => {
           content: '검수 처리 중 오류가 발생했습니다.',
           flags: DISCORD_MESSAGE_FLAGS.EPHEMERAL
         }
-      },
-      { status }
+      }
     );
   }
 });

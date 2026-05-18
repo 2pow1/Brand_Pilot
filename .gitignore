@@ -21,6 +21,8 @@ coverage/
 *.sqlite3
 data/
 artifacts/generated/
+supabase/.temp/
+supabase/supabase/
 tmp/
 temp/
 

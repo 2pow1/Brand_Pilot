@@ -1,0 +1,4 @@
+project_id = "finhgkhvhpzdizzmhldp"
+
+[functions.discord-review]
+verify_jwt = false
