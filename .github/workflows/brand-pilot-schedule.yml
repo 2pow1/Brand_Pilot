@@ -59,4 +59,5 @@ jobs:
         run: node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 3
 
       - name: Sync Notion mirror
+        if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
         run: node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10

@@ -36,16 +36,6 @@ const CHECKS = Object.freeze({
       name: 'DISCORD_REVIEW_CHANNEL_ID',
       key: 'discordReviewChannelId',
       message: 'Required for the scheduled Discord review request step.'
-    },
-    {
-      name: 'NOTION_TOKEN',
-      key: 'notionToken',
-      message: 'Required for the scheduled Notion mirror sync step.'
-    },
-    {
-      name: 'NOTION_DATA_SOURCE_ID',
-      key: 'notionDataSourceId',
-      message: 'Required for the scheduled Notion mirror sync step.'
     }
   ],
   [TARGETS.DISCORD]: [
