@@ -21,9 +21,7 @@ test('reports missing scheduled pipeline configuration without exposing secrets'
     'SUPABASE_SERVICE_ROLE_KEY',
     'OPENAI_API_KEY',
     'DISCORD_BOT_TOKEN',
-    'DISCORD_REVIEW_CHANNEL_ID',
-    'NOTION_TOKEN',
-    'NOTION_DATA_SOURCE_ID'
+    'DISCORD_REVIEW_CHANNEL_ID'
   ]);
 
   const text = formatDoctorReport(report);
