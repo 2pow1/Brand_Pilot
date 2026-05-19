@@ -63,6 +63,22 @@ function countByStatus(rows) {
 }
 
 /**
+ * Counts publish-pending outputs by whether their artifact path is already public.
+ */
+function summarizePublishPendingArtifacts(rows) {
+  const publishPendingRows = rows.filter((row) => {
+    const content = row.content_items || {};
+    return row.status === CHANNEL_STATUSES.PUBLISH_PENDING && content.status === CONTENT_STATUSES.PUBLISH_PENDING;
+  });
+  const publishReadyCount = publishPendingRows.filter((row) => /^https?:\/\//i.test(row.artifact_path || '')).length;
+
+  return {
+    uploadPendingCount: publishPendingRows.length - publishReadyCount,
+    publishReadyCount
+  };
+}
+
+/**
  * Creates a Supabase REST-backed implementation of the shared store adapter.
  */
 export function createSupabaseStore(config) {
@@ -568,7 +584,7 @@ export function createSupabaseStore(config) {
           search: { select: 'status' }
         }),
         request('channel_outputs', {
-          search: { select: 'status' }
+          search: { select: 'status,artifact_path,content_items(status)' }
         }),
         request('events', {
           search: {
@@ -581,6 +597,7 @@ export function createSupabaseStore(config) {
       const summary = {
         contentByStatus: countByStatus(contentRows),
         channelsByStatus: countByStatus(channelRows),
+        publishPendingArtifacts: summarizePublishPendingArtifacts(channelRows),
         recentEvents: eventRows.map(normalizeEvent)
       };
 

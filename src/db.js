@@ -472,6 +472,25 @@ export function updateContentNotionSync(db, { id, notionPageId, eventType, paylo
 }
 
 /**
+ * Counts publish-pending channel outputs by whether their artifact is already public.
+ */
+function summarizePublishPendingArtifacts(db) {
+  const rows = db.prepare(`
+    SELECT co.artifact_path AS artifact_path
+    FROM channel_outputs co
+    JOIN content_items c ON c.id = co.content_item_id
+    WHERE co.status = ?
+      AND c.status = ?
+  `).all(CHANNEL_STATUSES.PUBLISH_PENDING, CONTENT_STATUSES.PUBLISH_PENDING);
+  const publishReadyCount = rows.filter((row) => /^https?:\/\//i.test(row.artifact_path || '')).length;
+
+  return {
+    uploadPendingCount: rows.length - publishReadyCount,
+    publishReadyCount
+  };
+}
+
+/**
  * Builds a local database summary used by the status command.
  */
 export function summarize(db) {
@@ -499,6 +518,7 @@ export function summarize(db) {
   const summary = {
     contentByStatus,
     channelsByStatus,
+    publishPendingArtifacts: summarizePublishPendingArtifacts(db),
     recentEvents
   };
 
