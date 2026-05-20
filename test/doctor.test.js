@@ -68,3 +68,13 @@ test('reports Discord interaction configuration separately from schedule checks'
   assert.equal(report.ok, false);
   assert.deepEqual(report.missing, ['DISCORD_PUBLIC_KEY']);
 });
+
+test('reports Notion mirror configuration separately from schedule checks', () => {
+  const report = buildDoctorReport({
+    notionToken: 'notion-token',
+    notionDataSourceId: ''
+  }, 'notion');
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.missing, ['NOTION_DATA_SOURCE_ID']);
+});

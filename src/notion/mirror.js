@@ -1,4 +1,15 @@
 const MAX_RICH_TEXT_LENGTH = 1900;
+const REQUIRED_DATA_SOURCE_PROPERTIES = Object.freeze({
+  Name: 'title',
+  'Content ID': 'rich_text',
+  Status: 'rich_text',
+  Source: 'rich_text',
+  'Source URL': 'url',
+  Draft: 'rich_text',
+  'Review Message': 'rich_text',
+  'Rejection Reason': 'rich_text',
+  'Updated At': 'date'
+});
 
 /**
  * Normalizes Notion API base URLs before appending endpoint paths.
@@ -113,6 +124,38 @@ async function notionRequest({ config, path, method = 'GET', body, fetchImpl = f
   }
 
   return payload;
+}
+
+/**
+ * Checks whether the configured Notion data source has the properties Brand Pilot writes.
+ */
+export async function checkNotionDataSource({ config, fetchImpl = fetch }) {
+  const dataSource = await notionRequest({
+    config,
+    path: `data_sources/${config.notionDataSourceId}`,
+    fetchImpl
+  });
+  const properties = dataSource.properties || {};
+  const results = Object.entries(REQUIRED_DATA_SOURCE_PROPERTIES).map(([name, expectedType]) => {
+    const actualType = properties[name]?.type || '';
+    const ok = actualType === expectedType;
+
+    return {
+      name,
+      expectedType,
+      actualType,
+      ok
+    };
+  });
+  const missing = results.filter((result) => !result.ok);
+
+  return {
+    ok: missing.length === 0,
+    dataSourceId: dataSource.id || config.notionDataSourceId,
+    title: dataSource.title?.[0]?.plain_text || dataSource.name || '',
+    missing,
+    properties: results
+  };
 }
 
 /**

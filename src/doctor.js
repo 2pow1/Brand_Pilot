@@ -1,7 +1,8 @@
 const TARGETS = Object.freeze({
   SCHEDULE: 'schedule',
   DISCORD: 'discord',
-  PUBLISH: 'publish'
+  PUBLISH: 'publish',
+  NOTION: 'notion'
 });
 
 const CHECKS = Object.freeze({
@@ -80,6 +81,18 @@ const CHECKS = Object.freeze({
       name: 'SUPABASE_STORAGE_BUCKET',
       key: 'supabaseStorageBucket',
       message: 'Required before uploading rendered Instagram images.'
+    }
+  ],
+  [TARGETS.NOTION]: [
+    {
+      name: 'NOTION_TOKEN',
+      key: 'notionToken',
+      message: 'Required for mirroring content records to Notion.'
+    },
+    {
+      name: 'NOTION_DATA_SOURCE_ID',
+      key: 'notionDataSourceId',
+      message: 'Required for choosing the Notion data source that receives mirror pages.'
     }
   ]
 });

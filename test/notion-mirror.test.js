@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { syncContentItemToNotion } from '../src/notion/mirror.js';
+import { checkNotionDataSource, syncContentItemToNotion } from '../src/notion/mirror.js';
 
 const config = {
   notionToken: 'notion-token',
@@ -82,6 +82,62 @@ test('updates a Notion page for already synced content', async () => {
   assert.equal(calls[0].url, 'https://api.notion.com/v1/pages/page_existing');
   assert.equal(calls[0].method, 'PATCH');
   assert.equal(calls[0].body.properties['Content ID'].rich_text[0].text.content, 'content_123');
+});
+
+test('checks Notion data source properties', async () => {
+  const result = await checkNotionDataSource({
+    config,
+    fetchImpl: async (url, options) => {
+      assert.equal(url, 'https://api.notion.com/v1/data_sources/data-source-id');
+      assert.equal(options.headers.Authorization, 'Bearer notion-token');
+
+      return Response.json({
+        id: 'data-source-id',
+        title: [{ plain_text: 'Brand Pilot Mirror' }],
+        properties: {
+          Name: { type: 'title' },
+          'Content ID': { type: 'rich_text' },
+          Status: { type: 'rich_text' },
+          Source: { type: 'rich_text' },
+          'Source URL': { type: 'url' },
+          Draft: { type: 'rich_text' },
+          'Review Message': { type: 'rich_text' },
+          'Rejection Reason': { type: 'rich_text' },
+          'Updated At': { type: 'date' }
+        }
+      });
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.title, 'Brand Pilot Mirror');
+  assert.equal(result.missing.length, 0);
+});
+
+test('reports missing Notion data source properties', async () => {
+  const result = await checkNotionDataSource({
+    config,
+    fetchImpl: async () =>
+      Response.json({
+        id: 'data-source-id',
+        properties: {
+          Name: { type: 'title' },
+          Status: { type: 'status' }
+        }
+      })
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing.map((property) => property.name), [
+    'Content ID',
+    'Status',
+    'Source',
+    'Source URL',
+    'Draft',
+    'Review Message',
+    'Rejection Reason',
+    'Updated At'
+  ]);
 });
 
 test('requires Notion credentials', async () => {

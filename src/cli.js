@@ -26,8 +26,9 @@ Usage:
   node src/cli.js instagram render [--limit <n>]
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
+  node src/cli.js notion check
   node src/cli.js notion sync [--limit <n>]
-  node src/cli.js doctor [schedule|discord|publish]
+  node src/cli.js doctor [schedule|discord|publish|notion]
   node src/cli.js transitions
 `);
 }
@@ -718,15 +719,32 @@ async function runNotionSync(argv) {
 }
 
 /**
+ * Verifies that the configured Notion data source has the required mirror properties.
+ */
+async function runNotionCheck() {
+  const config = loadConfig();
+  const { checkNotionDataSource } = await import('./notion/mirror.js');
+  const result = await checkNotionDataSource({ config });
+
+  console.log(JSON.stringify(result, null, 2));
+
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
+/**
  * Dispatches Notion subcommands.
  */
 async function runNotion(argv) {
   const action = argv[0];
 
-  if (action === 'sync') {
+  if (action === 'check') {
+    await runNotionCheck();
+  } else if (action === 'sync') {
     await runNotionSync(argv.slice(1));
   } else {
-    throw new Error('notion command must be: sync');
+    throw new Error('notion command must be one of: check, sync');
   }
 }
 
@@ -743,7 +761,7 @@ function runTransitions() {
 async function runDoctor(argv) {
   const target = argv[0] || 'schedule';
   if (argv.length > 1) {
-    throw new Error('doctor command accepts at most one target: schedule, discord, or publish');
+    throw new Error('doctor command accepts at most one target: schedule, discord, publish, or notion');
   }
 
   const config = loadConfig();
