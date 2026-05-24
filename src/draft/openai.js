@@ -20,24 +20,31 @@ export function extractResponseText(response) {
  * Converts OpenAI schema field names into the app's draft object shape.
  */
 function normalizeDraft(draft) {
+  const cta = draft.cta || {};
+  const hook = draft.hook || '';
+  const body = draft.body || '';
+
   return {
     title: draft.title,
-    body: draft.body,
-    angle: draft.angle,
-    keyPoints: draft.key_points,
-    cta: draft.cta
+    hook,
+    body: [hook, body].filter(Boolean).join('\n\n'),
+    angle: draft.content_angle,
+    keyPoints: draft.keywords,
+    cta: cta.label || '',
+    ctaUrl: cta.url || '',
+    suggestedRepurpose: draft.suggested_repurpose || {}
   };
 }
 
 /**
  * Calls the OpenAI Responses API and returns a structured review-ready draft.
  */
-export async function createOpenAiDraft({ config, prompt }) {
+export async function createOpenAiDraft({ config, prompt, fetchImpl = fetch }) {
   if (!config.openaiApiKey) {
     throw new Error('OPENAI_API_KEY is required. Use --mock to generate a local draft without the API.');
   }
 
-  const response = await fetch(`${config.openaiBaseUrl}/responses`, {
+  const response = await fetchImpl(`${config.openaiBaseUrl}/responses`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${config.openaiApiKey}`,

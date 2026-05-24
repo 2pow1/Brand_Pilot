@@ -1,29 +1,75 @@
 export const DRAFT_RESPONSE_SCHEMA = Object.freeze({
   type: 'object',
   additionalProperties: false,
-  required: ['title', 'body', 'angle', 'key_points', 'cta'],
+  required: [
+    'title',
+    'hook',
+    'body',
+    'cta',
+    'keywords',
+    'content_angle',
+    'suggested_repurpose'
+  ],
   properties: {
     title: {
       type: 'string',
-      description: 'Short internal review title for the marketing draft.'
+      description: 'Short review title for the master draft.'
+    },
+    hook: {
+      type: 'string',
+      description: 'Opening hook that makes the target reader recognize the problem.'
     },
     body: {
       type: 'string',
-      description: 'Review-ready Korean draft that can later become channel-specific content.'
+      description: 'Review-ready Korean body content focused on practical implications for small business owners.'
     },
-    angle: {
-      type: 'string',
-      description: 'The core marketing angle used in the draft.'
+    cta: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['label', 'url'],
+      properties: {
+        label: {
+          type: 'string'
+        },
+        url: {
+          type: 'string'
+        }
+      }
     },
-    key_points: {
+    keywords: {
       type: 'array',
       items: {
         type: 'string'
-      }
+      },
+      description: 'Core keywords or review notes that summarize the selected draft direction.'
     },
-    cta: {
+    content_angle: {
       type: 'string',
-      description: 'Suggested call to action.'
+      enum: [
+        'empathy-driven',
+        'problem-awareness',
+        'practical-insight',
+        'trust-building',
+        'motivational',
+        'soft-conversion'
+      ],
+      description: 'The selected content strategy angle.'
+    },
+    suggested_repurpose: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['instagram', 'blog', 'linkedin'],
+      properties: {
+        instagram: {
+          type: 'string'
+        },
+        blog: {
+          type: 'string'
+        },
+        linkedin: {
+          type: 'string'
+        }
+      }
     }
   }
 });

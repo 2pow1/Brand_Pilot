@@ -72,9 +72,12 @@ export async function saveDraftForContent(store, item, draft, payload = {}) {
     eventType: 'content.draft.created',
     payload: {
       ...payload,
+      hook: draft.hook,
       angle: draft.angle,
       keyPoints: draft.keyPoints,
-      cta: draft.cta
+      cta: draft.cta,
+      ctaUrl: draft.ctaUrl,
+      suggestedRepurpose: draft.suggestedRepurpose
     }
   });
 }
