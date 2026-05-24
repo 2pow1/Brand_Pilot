@@ -50,3 +50,38 @@ test('stores Notion page id after mirror sync', async () => {
 
   await store.close();
 });
+
+test('lists Notion sync rows with Instagram channel backup fields', async () => {
+  const db = openDatabase(':memory:');
+  migrate(db);
+  const store = createSqliteStore(db);
+  const { item } = await createCollectedContentIfNew(store, {
+    sourceId: 'source-a',
+    sourceName: 'Source A',
+    sourceUrl: 'https://example.com/article/three',
+    sourceTitle: 'A third article about branding',
+    rawExcerpt: 'Short summary'
+  });
+  await store.upsertChannelOutput({
+    contentItemId: item.id,
+    channelId: 'instagram',
+    payload: {
+      caption: 'Caption',
+      hashtags: ['#brand'],
+      slides: [{ index: 1 }, { index: 2 }]
+    },
+    eventType: 'content.channel.generated',
+    eventPayload: {
+      channelId: 'instagram'
+    }
+  });
+
+  const rows = await store.listContentItemsForNotionSync({ limit: 1 });
+
+  assert.equal(rows[0].id, item.id);
+  assert.equal(rows[0].notion_channel_id, 'instagram');
+  assert.equal(rows[0].notion_channel_status, 'generated');
+  assert.match(rows[0].notion_channel_payload_json, /Caption/);
+
+  await store.close();
+});

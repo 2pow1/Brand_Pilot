@@ -16,6 +16,14 @@ Notion에 새 database를 만들고 아래 속성을 추가합니다. Notion API
 | Draft | Text |
 | Review Message | Text |
 | Rejection Reason | Text |
+| Channel | Text |
+| Channel Status | Text |
+| Caption | Text |
+| Hashtags | Text |
+| Slide Count | Number |
+| Artifact URL | URL |
+| Published URL | URL |
+| Channel Last Error | Text |
 | Updated At | Date |
 
 ## Connection
@@ -56,6 +64,6 @@ node --no-warnings=ExperimentalWarning src/cli.js notion check
 node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
 ```
 
-처음 동기화하면 Notion page를 만들고, 이후에는 Supabase `content_items.notion_page_id`를 기준으로 같은 page를 업데이트합니다.
+처음 동기화하면 Notion page를 만들고, 이후에는 Supabase `content_items.notion_page_id`를 기준으로 같은 page를 업데이트합니다. Notion sync는 `content_items` 기본 정보와 Instagram `channel_outputs`의 caption, hashtag, slide count, artifact URL, published URL, channel status를 함께 미러링합니다.
 
 GitHub Actions에서는 `NOTION_TOKEN`과 `NOTION_DATA_SOURCE_ID`가 둘 다 있을 때만 Notion sync step을 실행합니다. 값이 없으면 schedule pipeline은 Notion만 건너뛰고 계속 성공할 수 있습니다.

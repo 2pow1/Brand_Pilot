@@ -8,6 +8,14 @@ const REQUIRED_DATA_SOURCE_PROPERTIES = Object.freeze({
   Draft: 'rich_text',
   'Review Message': 'rich_text',
   'Rejection Reason': 'rich_text',
+  Channel: 'rich_text',
+  'Channel Status': 'rich_text',
+  Caption: 'rich_text',
+  Hashtags: 'rich_text',
+  'Slide Count': 'number',
+  'Artifact URL': 'url',
+  'Published URL': 'url',
+  'Channel Last Error': 'rich_text',
   'Updated At': 'date'
 });
 
@@ -85,9 +93,54 @@ function dateProperty(value) {
 }
 
 /**
+ * Builds a Notion number property payload.
+ */
+function numberProperty(value) {
+  return {
+    number: Number.isFinite(value) ? value : null
+  };
+}
+
+/**
+ * Parses a JSON string or object without failing the whole Notion sync.
+ */
+function parseJsonPayload(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Extracts channel-specific backup fields from a flattened content row.
+ */
+function channelBackupFields(item) {
+  const payload = parseJsonPayload(item.notion_channel_payload_json);
+  const slides = Array.isArray(payload.slides) ? payload.slides : [];
+  const hashtags = Array.isArray(payload.hashtags) ? payload.hashtags.join(' ') : '';
+
+  return {
+    channelId: item.notion_channel_id || payload.channelId || '',
+    channelStatus: item.notion_channel_status || '',
+    caption: payload.caption || '',
+    hashtags,
+    slideCount: slides.length,
+    artifactUrl: item.notion_channel_artifact_path || '',
+    publishedUrl: item.notion_channel_published_url || '',
+    lastError: item.notion_channel_last_error || ''
+  };
+}
+
+/**
  * Maps a content item row into the configured Notion data source properties.
  */
 function buildPageProperties(item) {
+  const channel = channelBackupFields(item);
+
   return {
     Name: titleProperty(item.draft_title || item.source_title),
     'Content ID': richTextProperty(item.id),
@@ -97,6 +150,14 @@ function buildPageProperties(item) {
     Draft: richTextProperty(item.draft_body),
     'Review Message': richTextProperty(item.review_message_id),
     'Rejection Reason': richTextProperty(item.rejection_reason),
+    Channel: richTextProperty(channel.channelId),
+    'Channel Status': richTextProperty(channel.channelStatus),
+    Caption: richTextProperty(channel.caption),
+    Hashtags: richTextProperty(channel.hashtags),
+    'Slide Count': numberProperty(channel.slideCount),
+    'Artifact URL': urlProperty(channel.artifactUrl),
+    'Published URL': urlProperty(channel.publishedUrl),
+    'Channel Last Error': richTextProperty(channel.lastError),
     'Updated At': dateProperty(item.updated_at)
   };
 }

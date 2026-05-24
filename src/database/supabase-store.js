@@ -79,6 +79,26 @@ function summarizePublishPendingArtifacts(rows) {
 }
 
 /**
+ * Flattens the Instagram channel output relation onto a content row for Notion sync.
+ */
+function normalizeNotionSyncRow(row) {
+  const channelOutputs = row.channel_outputs || [];
+  const instagramOutput = channelOutputs.find((output) => output.channel_id === 'instagram') || channelOutputs[0] || {};
+  const { channel_outputs: _channelOutputs, ...content } = row;
+
+  return {
+    ...content,
+    notion_channel_id: instagramOutput.channel_id || '',
+    notion_channel_status: instagramOutput.status || '',
+    notion_channel_payload_json: JSON.stringify(instagramOutput.payload_json || {}),
+    notion_channel_artifact_path: instagramOutput.artifact_path || '',
+    notion_channel_published_url: instagramOutput.published_url || '',
+    notion_channel_last_error: instagramOutput.last_error || '',
+    notion_channel_updated_at: instagramOutput.updated_at || ''
+  };
+}
+
+/**
  * Creates a Supabase REST-backed implementation of the shared store adapter.
  */
 export function createSupabaseStore(config) {
@@ -270,7 +290,7 @@ export function createSupabaseStore(config) {
     async listContentItemsForNotionSync({ limit = 10 } = {}) {
       const unsynced = await request('content_items', {
         search: {
-          select: '*',
+          select: '*,channel_outputs(*)',
           notion_page_id: 'eq.',
           order: 'updated_at.desc',
           limit
@@ -283,14 +303,14 @@ export function createSupabaseStore(config) {
 
       const synced = await request('content_items', {
         search: {
-          select: '*',
+          select: '*,channel_outputs(*)',
           notion_page_id: 'neq.',
           order: 'updated_at.desc',
           limit: limit - unsynced.length
         }
       });
 
-      return [...unsynced, ...synced];
+      return [...unsynced, ...synced].map(normalizeNotionSyncRow);
     },
 
     /**

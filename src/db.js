@@ -175,11 +175,22 @@ export function listContentItemsByStatus(db, status, { limit = 10 } = {}) {
  */
 export function listContentItemsForNotionSync(db, { limit = 10 } = {}) {
   return db.prepare(`
-    SELECT *
-    FROM content_items
+    SELECT
+      c.*,
+      co.channel_id AS notion_channel_id,
+      co.status AS notion_channel_status,
+      co.payload_json AS notion_channel_payload_json,
+      co.artifact_path AS notion_channel_artifact_path,
+      co.published_url AS notion_channel_published_url,
+      co.last_error AS notion_channel_last_error,
+      co.updated_at AS notion_channel_updated_at
+    FROM content_items c
+    LEFT JOIN channel_outputs co
+      ON co.content_item_id = c.id
+      AND co.channel_id = 'instagram'
     ORDER BY
-      CASE WHEN notion_page_id = '' THEN 0 ELSE 1 END,
-      updated_at DESC
+      CASE WHEN c.notion_page_id = '' THEN 0 ELSE 1 END,
+      c.updated_at DESC
     LIMIT ?
   `).all(limit);
 }
