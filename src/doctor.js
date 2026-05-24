@@ -98,6 +98,25 @@ const CHECKS = Object.freeze({
 });
 
 /**
+ * Determines whether a doctor check should fail the command.
+ */
+function isBlockingFailure(result) {
+  return !result.ok;
+}
+
+/**
+ * Chooses a stable log label for a doctor check result.
+ */
+function formatStatusLabel(check) {
+  if (check.ok && check.status === 'warning') return 'warn';
+  if (check.ok) return 'ok';
+  if (check.status === 'expired') return 'expired';
+  if (check.status === 'missing_scope') return 'missing_scope';
+  if (check.status === 'invalid') return 'invalid';
+  return 'missing';
+}
+
+/**
  * Evaluates one configuration requirement without including secret values in the result.
  */
 function checkConfigValue(config, check) {
@@ -115,6 +134,20 @@ function checkConfigValue(config, check) {
 }
 
 /**
+ * Builds a preflight report from an explicit set of checks.
+ */
+function reportFromChecks(target, results) {
+  const failures = results.filter(isBlockingFailure);
+
+  return {
+    target,
+    ok: failures.length === 0,
+    missing: failures.map((result) => result.name),
+    checks: results
+  };
+}
+
+/**
  * Builds a preflight report for a workflow target such as schedule or publish.
  */
 export function buildDoctorReport(config, target = TARGETS.SCHEDULE) {
@@ -125,14 +158,31 @@ export function buildDoctorReport(config, target = TARGETS.SCHEDULE) {
   }
 
   const results = checks.map((check) => checkConfigValue(config, check));
-  const missing = results.filter((result) => !result.ok);
 
-  return {
-    target,
-    ok: missing.length === 0,
-    missing: missing.map((result) => result.name),
-    checks: results
-  };
+  return reportFromChecks(target, results);
+}
+
+/**
+ * Builds a preflight report and includes remote checks when the target needs them.
+ */
+export async function buildDoctorReportWithRemoteChecks(
+  config,
+  target = TARGETS.SCHEDULE,
+  { fetchImpl = fetch, now = new Date() } = {}
+) {
+  const report = buildDoctorReport(config, target);
+
+  if (target !== TARGETS.PUBLISH || !report.ok) {
+    return report;
+  }
+
+  const { buildMetaPublishChecks } = await import('./meta/token.js');
+  const remoteChecks = await buildMetaPublishChecks({ config, fetchImpl, now });
+
+  return reportFromChecks(target, [
+    ...report.checks,
+    ...remoteChecks
+  ]);
 }
 
 /**
@@ -145,7 +195,7 @@ export function formatDoctorReport(report) {
   ];
 
   for (const check of report.checks) {
-    lines.push(`${check.ok ? '[ok]' : '[missing]'} ${check.name}${check.message ? ` - ${check.message}` : ''}`);
+    lines.push(`[${formatStatusLabel(check)}] ${check.name}${check.message ? ` - ${check.message}` : ''}`);
   }
 
   return lines.join('\n');

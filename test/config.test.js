@@ -47,3 +47,22 @@ test('loads notion data source settings with database id fallback', () => {
   assert.equal(config.notionBaseUrl, 'https://api.notion.com/v1');
   assert.equal(config.notionVersion, '2026-03-11');
 });
+
+test('loads Meta publish preflight settings', () => {
+  const config = loadConfig({
+    cwd: EMPTY_ENV_CWD,
+    env: {
+      META_ACCESS_TOKEN: 'meta-token',
+      META_APP_ID: 'meta-app-id',
+      META_APP_SECRET: 'meta-app-secret',
+      META_TOKEN_EXPIRY_WARNING_DAYS: '10',
+      INSTAGRAM_BUSINESS_ACCOUNT_ID: 'ig-business-id'
+    }
+  });
+
+  assert.equal(config.metaAccessToken, 'meta-token');
+  assert.equal(config.metaAppId, 'meta-app-id');
+  assert.equal(config.metaAppSecret, 'meta-app-secret');
+  assert.equal(config.metaTokenExpiryWarningDays, 10);
+  assert.equal(config.instagramBusinessAccountId, 'ig-business-id');
+});

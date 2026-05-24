@@ -765,8 +765,8 @@ async function runDoctor(argv) {
   }
 
   const config = loadConfig();
-  const { buildDoctorReport, formatDoctorReport } = await import('./doctor.js');
-  const report = buildDoctorReport(config, target);
+  const { buildDoctorReportWithRemoteChecks, formatDoctorReport } = await import('./doctor.js');
+  const report = await buildDoctorReportWithRemoteChecks(config, target);
 
   console.log(formatDoctorReport(report));
 

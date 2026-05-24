@@ -83,7 +83,10 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     notionBaseUrl: merged.NOTION_BASE_URL || DEFAULT_NOTION_BASE_URL,
     notionVersion: merged.NOTION_VERSION || DEFAULT_NOTION_VERSION,
     metaAccessToken: merged.META_ACCESS_TOKEN || '',
+    metaAppId: merged.META_APP_ID || '',
+    metaAppSecret: merged.META_APP_SECRET || '',
     metaGraphBaseUrl: merged.META_GRAPH_BASE_URL || DEFAULT_META_GRAPH_BASE_URL,
+    metaTokenExpiryWarningDays: Number.parseInt(merged.META_TOKEN_EXPIRY_WARNING_DAYS || '7', 10),
     instagramBusinessAccountId: merged.INSTAGRAM_BUSINESS_ACCOUNT_ID || ''
   };
 }
