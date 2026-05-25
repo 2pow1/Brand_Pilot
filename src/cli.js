@@ -515,7 +515,7 @@ async function runInstagramPublish(argv) {
   const { createMockInstagramPublishResult, loadInstagramPublishInput, publishInstagramCardNews } = await import(
     './publish/instagram.js'
   );
-  const { markChannelOutputPublished } = await import('./repository.js');
+  const { markChannelOutputPublishFailed, markChannelOutputPublished } = await import('./repository.js');
   const { store } = await openAppDatabase();
   const rows = await store.listChannelOutputsReadyToPublish({
     channelId: 'instagram',
@@ -552,9 +552,16 @@ async function runInstagramPublish(argv) {
         publishedUrl: saved.output.published_url
       });
     } catch (error) {
+      const saved = await markChannelOutputPublishFailed(store, row, row, error.message, {
+        mode: options.mock ? 'mock' : 'instagram-graph-api'
+      });
+
       failed.push({
         id: row.id,
         sourceTitle: row.source_title,
+        channelId: saved.output.channel_id,
+        channelStatus: saved.output.status,
+        attemptCount: saved.output.attempt_count,
         error: error.message
       });
     }

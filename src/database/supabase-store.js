@@ -525,7 +525,9 @@ export function createSupabaseStore(config) {
           channel_status: row.status,
           channel_payload_json: JSON.stringify(row.payload_json || {}),
           channel_artifact_path: row.artifact_path,
-          channel_published_url: row.published_url
+          channel_published_url: row.published_url,
+          channel_attempt_count: row.attempt_count,
+          channel_last_error: row.last_error
         };
       });
     },
@@ -554,7 +556,9 @@ export function createSupabaseStore(config) {
           channel_status: row.status,
           channel_payload_json: JSON.stringify(row.payload_json || {}),
           channel_artifact_path: row.artifact_path,
-          channel_published_url: row.published_url
+          channel_published_url: row.published_url,
+          channel_attempt_count: row.attempt_count,
+          channel_last_error: row.last_error
         };
       });
     },
@@ -589,6 +593,23 @@ export function createSupabaseStore(config) {
           published_url: publishedUrl,
           updated_at: nowIso(),
           last_error: ''
+        }
+      );
+
+      return normalizePayloadJson(output);
+    },
+
+    /**
+     * Stores a failed channel publish attempt without advancing lifecycle status.
+     */
+    async updateChannelOutputFailure({ id, attemptCount = 0, lastError }) {
+      const output = await patchOne(
+        'channel_outputs',
+        { id: `eq.${id}` },
+        {
+          attempt_count: attemptCount + 1,
+          last_error: lastError,
+          updated_at: nowIso()
         }
       );
 

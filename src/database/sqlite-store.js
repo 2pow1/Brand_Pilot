@@ -12,6 +12,7 @@ import {
   openDatabase,
   summarize,
   updateChannelOutputArtifact,
+  updateChannelOutputFailure,
   updateChannelOutputPublished,
   updateContentNotionSync,
   updateContentDraft,
@@ -163,6 +164,13 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
      */
     async updateChannelOutputPublished(input) {
       return updateChannelOutputPublished(db, input);
+    },
+
+    /**
+     * Stores a failed channel publish attempt.
+     */
+    async updateChannelOutputFailure(input) {
+      return updateChannelOutputFailure(db, input);
     },
 
     /**

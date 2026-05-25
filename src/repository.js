@@ -229,6 +229,35 @@ export async function markChannelOutputPublished(store, item, channelOutput, pub
 }
 
 /**
+ * Records an external publish failure while keeping the item eligible for retry.
+ */
+export async function markChannelOutputPublishFailed(store, item, channelOutput, lastError, payload = {}) {
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputFailure({
+      id: channelOutput.channel_output_id || channelOutput.id,
+      attemptCount: channelOutput.channel_attempt_count || channelOutput.attempt_count || 0,
+      lastError
+    });
+
+    await store.insertEvent({
+      contentItemId: item.id,
+      eventType: 'content.channel.publish_failed',
+      payload: {
+        ...payload,
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        lastError,
+        attemptCount: output.attempt_count
+      }
+    });
+
+    return {
+      item,
+      output
+    };
+  });
+}
+
+/**
  * Records public Storage artifact URLs without changing the publish_pending content status.
  */
 export async function markChannelOutputUploaded(store, item, channelOutput, artifactPath, payload = {}) {

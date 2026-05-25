@@ -353,7 +353,9 @@ export function listChannelOutputsReadyToRender(db, { channelId, limit = 10 } = 
       co.status AS channel_status,
       co.payload_json AS channel_payload_json,
       co.artifact_path AS channel_artifact_path,
-      co.published_url AS channel_published_url
+      co.published_url AS channel_published_url,
+      co.attempt_count AS channel_attempt_count,
+      co.last_error AS channel_last_error
     FROM channel_outputs co
     JOIN content_items c ON c.id = co.content_item_id
     WHERE co.channel_id = ?
@@ -423,6 +425,27 @@ export function updateChannelOutputPublished(db, { id, status, publishedUrl }) {
         last_error = ''
     WHERE id = ?
   `).run(status, publishedUrl, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Channel output not found: ${id}`);
+  }
+
+  return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
+}
+
+/**
+ * Records a failed channel publish attempt without advancing lifecycle status.
+ */
+export function updateChannelOutputFailure(db, { id, lastError }) {
+  const updatedAt = nowIso();
+
+  const result = db.prepare(`
+    UPDATE channel_outputs
+    SET attempt_count = attempt_count + 1,
+        last_error = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(lastError, updatedAt, id);
 
   if (result.changes === 0) {
     throw new Error(`Channel output not found: ${id}`);
