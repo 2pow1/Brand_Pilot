@@ -357,3 +357,61 @@ export async function markContentNotionSynced(store, item, notionPageId, payload
     payload
   });
 }
+
+/**
+ * Records that public channel artifacts were imported into Notion-hosted files.
+ */
+export async function markChannelOutputNotionBackedUp(store, item, channelOutput, backupPayload = {}) {
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputBackup({
+      id: channelOutput.channel_output_id || channelOutput.id,
+      backupStatus: 'backed_up',
+      backupPayload,
+      backupError: ''
+    });
+
+    await store.insertEvent({
+      contentItemId: item.id,
+      eventType: 'content.notion.artifacts_backed_up',
+      payload: {
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        fileCount: backupPayload.files?.length || 0,
+        ...backupPayload
+      }
+    });
+
+    return {
+      item,
+      output
+    };
+  });
+}
+
+/**
+ * Records a failed Notion artifact backup without changing content or publish status.
+ */
+export async function markChannelOutputNotionBackupFailed(store, item, channelOutput, backupError, backupPayload = {}) {
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputBackup({
+      id: channelOutput.channel_output_id || channelOutput.id,
+      backupStatus: 'failed',
+      backupPayload,
+      backupError
+    });
+
+    await store.insertEvent({
+      contentItemId: item.id,
+      eventType: 'content.notion.artifacts_backup_failed',
+      payload: {
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        backupError,
+        ...backupPayload
+      }
+    });
+
+    return {
+      item,
+      output
+    };
+  });
+}

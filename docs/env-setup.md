@@ -204,13 +204,16 @@ NOTION_VERSION=2026-03-11
 node --no-warnings=ExperimentalWarning src/cli.js doctor notion
 node --no-warnings=ExperimentalWarning src/cli.js notion check
 node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 ```
 
 주의:
 
 - Notion은 source of truth가 아니라 읽기용 미러입니다.
 - 실제 상태 전이는 Supabase 또는 SQLite 저장소가 담당합니다.
-- GitHub Actions에서는 `NOTION_TOKEN`과 `NOTION_DATA_SOURCE_ID`가 둘 다 있을 때만 Notion sync step을 실행합니다.
+- GitHub Actions에서는 `NOTION_TOKEN`과 `NOTION_DATA_SOURCE_ID`가 둘 다 있을 때만 Notion sync/backup step을 실행합니다.
+- `notion backup`은 Supabase Storage public manifest와 PNG를 Notion File Upload API로 가져와 `Artifact Files`에 붙입니다.
+- 필요한 Notion 속성은 `docs/notion-mirror.md`를 기준으로 맞춥니다.
 
 ## Meta / Instagram
 
@@ -323,7 +326,7 @@ INSTAGRAM_PUBLISH_ENABLED
 ## 운영 계정 전환 체크리스트
 
 1. 새 Supabase 프로젝트에 `supabase/schema.sql` 적용
-2. 필요한 보강 SQL 적용
+2. 필요한 보강 SQL 적용: `supabase/publish-lock.sql`, `supabase/notion-artifact-backup.sql`
 3. Storage bucket 생성 및 public 접근 확인
 4. 로컬 `.env`를 운영 값으로 교체
 5. `doctor schedule`, `doctor discord`, `doctor notion`, `doctor publish` 실행
@@ -343,6 +346,7 @@ node --no-warnings=ExperimentalWarning src/cli.js doctor publish
 node --no-warnings=ExperimentalWarning src/cli.js status
 node --no-warnings=ExperimentalWarning src/cli.js review check
 node --no-warnings=ExperimentalWarning src/cli.js notion check
+node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 node --no-warnings=ExperimentalWarning --test
 ```
 

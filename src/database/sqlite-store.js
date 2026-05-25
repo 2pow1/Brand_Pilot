@@ -5,6 +5,7 @@ import {
   claimChannelOutputForPublish,
   insertEvent,
   insertContentItem,
+  listChannelOutputsReadyForNotionBackup,
   listChannelOutputsReadyToRender,
   listChannelOutputsReadyToPublish,
   listContentItemsForNotionSync,
@@ -13,6 +14,7 @@ import {
   openDatabase,
   summarize,
   updateChannelOutputArtifact,
+  updateChannelOutputBackup,
   updateChannelOutputFailure,
   updateChannelOutputPublished,
   updateContentNotionSync,
@@ -154,6 +156,13 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
     },
 
     /**
+     * Lists public channel artifacts ready to be imported into Notion.
+     */
+    async listChannelOutputsReadyForNotionBackup(options) {
+      return listChannelOutputsReadyForNotionBackup(db, options);
+    },
+
+    /**
      * Claims one publish-pending channel output before an external publish call.
      */
     async claimChannelOutputForPublish(input) {
@@ -179,6 +188,13 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
      */
     async updateChannelOutputFailure(input) {
       return updateChannelOutputFailure(db, input);
+    },
+
+    /**
+     * Stores Notion artifact backup status for a channel output.
+     */
+    async updateChannelOutputBackup(input) {
+      return updateChannelOutputBackup(db, input);
     },
 
     /**

@@ -79,3 +79,7 @@ jobs:
       - name: Sync Notion mirror
         if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
         run: node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
+
+      - name: Backup Notion artifact files
+        if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10

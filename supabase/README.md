@@ -6,7 +6,8 @@
 4. Run `supabase/storage.sql` to create the public Instagram artifact bucket.
 5. Run `supabase/notion.sql` if `schema.sql` was already applied before the Notion columns were added.
 6. Run `supabase/publish-lock.sql` if `schema.sql` was already applied before publish lock columns were added.
-7. Add server-side environment variables:
+7. Run `supabase/notion-artifact-backup.sql` if `schema.sql` was already applied before Notion artifact backup columns were added.
+8. Add server-side environment variables:
 
 ```text
 DATABASE_PROVIDER=supabase
@@ -44,3 +45,5 @@ DATABASE_URL=file:./data/brand-pilot.sqlite
 For free-first scheduled operation, add the same production values as GitHub repository secrets and enable `.github/workflows/brand-pilot-schedule.yml`.
 
 Instagram publishing also needs public image URLs. Run `instagram upload` after `instagram render` to upload local PNG files and the manifest to the public Storage bucket before `instagram publish`.
+
+Notion artifact backup imports those public Storage files into Notion-hosted files. Run `notion sync` first so each content item has a Notion page, then run `notion backup`.

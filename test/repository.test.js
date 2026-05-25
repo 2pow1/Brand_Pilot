@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { openDatabase, migrate } from '../src/db.js';
 import { createSqliteStore } from '../src/database/sqlite-store.js';
 import { createCollectedContentIfNew, markContentNotionSynced } from '../src/repository.js';
+import { markChannelOutputNotionBackedUp } from '../src/repository.js';
 
 test('does not insert duplicate collected candidates', async () => {
   const db = openDatabase(':memory:');
@@ -82,6 +83,58 @@ test('lists Notion sync rows with Instagram channel backup fields', async () => 
   assert.equal(rows[0].notion_channel_id, 'instagram');
   assert.equal(rows[0].notion_channel_status, 'generated');
   assert.match(rows[0].notion_channel_payload_json, /Caption/);
+
+  await store.close();
+});
+
+test('lists and marks channel artifacts backed up to Notion files', async () => {
+  const db = openDatabase(':memory:');
+  migrate(db);
+  const store = createSqliteStore(db);
+  const { item } = await createCollectedContentIfNew(store, {
+    sourceId: 'source-a',
+    sourceName: 'Source A',
+    sourceUrl: 'https://example.com/article/four',
+    sourceTitle: 'A fourth article about branding',
+    rawExcerpt: 'Short summary'
+  });
+  const synced = await markContentNotionSynced(store, item, 'page_123');
+  const output = await store.upsertChannelOutput({
+    contentItemId: synced.id,
+    channelId: 'instagram',
+    status: 'publish_pending',
+    payload: {
+      caption: 'Caption',
+      slides: [{ index: 1 }, { index: 2 }]
+    },
+    artifactPath: 'https://storage.example.com/instagram/content_123/manifest.json',
+    eventType: 'content.channel.generated'
+  });
+  const ready = await store.listChannelOutputsReadyForNotionBackup({
+    channelId: 'instagram',
+    limit: 10
+  });
+
+  assert.equal(ready.length, 1);
+  assert.equal(ready[0].notion_page_id, 'page_123');
+  assert.equal(ready[0].channel_artifact_path, 'https://storage.example.com/instagram/content_123/manifest.json');
+
+  const backedUp = await markChannelOutputNotionBackedUp(store, synced, output, {
+    files: [{ id: 'file_upload_1', filename: 'slide-01.png' }]
+  });
+  const readyAfterBackup = await store.listChannelOutputsReadyForNotionBackup({
+    channelId: 'instagram',
+    limit: 10
+  });
+
+  assert.equal(backedUp.output.backup_status, 'backed_up');
+  assert.ok(backedUp.output.backup_completed_at);
+  assert.equal(readyAfterBackup.length, 0);
+  assert.equal(
+    db.prepare("SELECT COUNT(*) AS count FROM events WHERE event_type = 'content.notion.artifacts_backed_up'").get()
+      .count,
+    1
+  );
 
   await store.close();
 });

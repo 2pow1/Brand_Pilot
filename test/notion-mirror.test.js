@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { checkNotionDataSource, syncContentItemToNotion } from '../src/notion/mirror.js';
+import { backupNotionArtifactsForItem, checkNotionDataSource, syncContentItemToNotion } from '../src/notion/mirror.js';
 
 const config = {
   notionToken: 'notion-token',
@@ -30,7 +30,13 @@ const item = {
   }),
   notion_channel_artifact_path: 'https://storage.example.com/manifest.json',
   notion_channel_published_url: 'https://www.instagram.com/p/shortcode/',
-  notion_channel_last_error: ''
+  notion_channel_last_error: '',
+  notion_channel_backup_status: 'backed_up',
+  notion_channel_backup_completed_at: '2026-05-13T01:00:00.000Z',
+  notion_channel_backup_payload_json: JSON.stringify({
+    files: [{ id: 'file_upload_1', filename: 'slide-01.png' }]
+  }),
+  notion_channel_backup_error: ''
 };
 
 test('creates a Notion page for unsynced content', async () => {
@@ -70,6 +76,8 @@ test('creates a Notion page for unsynced content', async () => {
   assert.equal(calls[0].body.properties['Slide Count'].number, 3);
   assert.equal(calls[0].body.properties['Artifact URL'].url, 'https://storage.example.com/manifest.json');
   assert.equal(calls[0].body.properties['Published URL'].url, 'https://www.instagram.com/p/shortcode/');
+  assert.equal(calls[0].body.properties['Backup Status'].rich_text[0].text.content, 'backed_up');
+  assert.equal(calls[0].body.properties['Backup File Count'].number, 1);
 });
 
 test('updates a Notion page for already synced content', async () => {
@@ -128,6 +136,11 @@ test('checks Notion data source properties', async () => {
           'Artifact URL': { type: 'url' },
           'Published URL': { type: 'url' },
           'Channel Last Error': { type: 'rich_text' },
+          'Backup Status': { type: 'rich_text' },
+          'Backup Completed At': { type: 'date' },
+          'Backup File Count': { type: 'number' },
+          'Backup Last Error': { type: 'rich_text' },
+          'Artifact Files': { type: 'files' },
           'Updated At': { type: 'date' }
         }
       });
@@ -169,8 +182,79 @@ test('reports missing Notion data source properties', async () => {
     'Artifact URL',
     'Published URL',
     'Channel Last Error',
+    'Backup Status',
+    'Backup Completed At',
+    'Backup File Count',
+    'Backup Last Error',
+    'Artifact Files',
     'Updated At'
   ]);
+});
+
+test('backs up public render artifacts into Notion file uploads', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    const body = options.body ? JSON.parse(options.body) : null;
+    calls.push({
+      url: String(url),
+      method: options.method || 'GET',
+      body
+    });
+
+    if (String(url) === 'https://storage.example.com/manifest.json') {
+      return Response.json({
+        slides: [
+          {
+            fileName: 'slide-01.png',
+            publicUrl: 'https://storage.example.com/slide-01.png'
+          },
+          {
+            fileName: 'slide-02.png',
+            publicUrl: 'https://storage.example.com/slide-02.png'
+          }
+        ]
+      });
+    }
+
+    if (String(url) === 'https://api.notion.com/v1/file_uploads' && body.external_url) {
+      return Response.json({
+        id: `upload_${body.filename.replace(/[^a-z0-9]/gi, '_')}`,
+        filename: body.filename,
+        content_type: body.content_type,
+        status: 'uploaded'
+      });
+    }
+
+    if (String(url) === 'https://api.notion.com/v1/pages/page_123') {
+      return Response.json({
+        id: 'page_123',
+        url: 'https://notion.so/page_123'
+      });
+    }
+
+    return Response.json({ message: 'unexpected request' }, { status: 500 });
+  };
+
+  const result = await backupNotionArtifactsForItem({
+    config,
+    item: {
+      ...item,
+      notion_page_id: 'page_123',
+      channel_artifact_path: 'https://storage.example.com/manifest.json'
+    },
+    fetchImpl,
+    pollIntervalMs: 0
+  });
+  const patchCall = calls.find((call) => call.url === 'https://api.notion.com/v1/pages/page_123');
+
+  assert.equal(result.files.length, 3);
+  assert.equal(result.files[0].role, 'manifest');
+  assert.equal(result.files[1].role, 'slide');
+  assert.equal(patchCall.method, 'PATCH');
+  assert.equal(patchCall.body.properties['Artifact Files'].files.length, 3);
+  assert.equal(patchCall.body.properties['Artifact Files'].files[0].type, 'file_upload');
+  assert.equal(patchCall.body.properties['Backup Status'].rich_text[0].text.content, 'backed_up');
+  assert.equal(patchCall.body.properties['Backup File Count'].number, 3);
 });
 
 test('requires Notion credentials', async () => {

@@ -64,6 +64,10 @@ export function migrate(db) {
       payload_json TEXT NOT NULL DEFAULT '{}',
       artifact_path TEXT NOT NULL DEFAULT '',
       published_url TEXT NOT NULL DEFAULT '',
+      backup_status TEXT NOT NULL DEFAULT '',
+      backup_completed_at TEXT,
+      backup_payload_json TEXT NOT NULL DEFAULT '{}',
+      backup_error TEXT NOT NULL DEFAULT '',
       attempt_count INTEGER NOT NULL DEFAULT 0,
       next_retry_at TEXT,
       locked_until TEXT,
@@ -90,6 +94,10 @@ export function migrate(db) {
 
   ensureColumn(db, 'content_items', 'notion_page_id', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'content_items', 'notion_synced_at', 'TEXT');
+  ensureColumn(db, 'channel_outputs', 'backup_status', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'channel_outputs', 'backup_completed_at', 'TEXT');
+  ensureColumn(db, 'channel_outputs', 'backup_payload_json', "TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn(db, 'channel_outputs', 'backup_error', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'channel_outputs', 'next_retry_at', 'TEXT');
   ensureColumn(db, 'channel_outputs', 'locked_until', 'TEXT');
 
@@ -192,7 +200,11 @@ export function listContentItemsForNotionSync(db, { limit = 10 } = {}) {
       co.artifact_path AS notion_channel_artifact_path,
       co.published_url AS notion_channel_published_url,
       co.last_error AS notion_channel_last_error,
-      co.updated_at AS notion_channel_updated_at
+      co.updated_at AS notion_channel_updated_at,
+      co.backup_status AS notion_channel_backup_status,
+      co.backup_completed_at AS notion_channel_backup_completed_at,
+      co.backup_payload_json AS notion_channel_backup_payload_json,
+      co.backup_error AS notion_channel_backup_error
     FROM content_items c
     LEFT JOIN channel_outputs co
       ON co.content_item_id = c.id
@@ -202,6 +214,35 @@ export function listContentItemsForNotionSync(db, { limit = 10 } = {}) {
       c.updated_at DESC
     LIMIT ?
   `).all(limit);
+}
+
+/**
+ * Lists public channel artifacts that have a Notion page but are not backed up to Notion files yet.
+ */
+export function listChannelOutputsReadyForNotionBackup(db, { channelId, limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT
+      c.*,
+      co.id AS channel_output_id,
+      co.channel_id AS output_channel_id,
+      co.status AS channel_status,
+      co.payload_json AS channel_payload_json,
+      co.artifact_path AS channel_artifact_path,
+      co.published_url AS channel_published_url,
+      co.backup_status AS channel_backup_status,
+      co.backup_completed_at AS channel_backup_completed_at,
+      co.backup_payload_json AS channel_backup_payload_json,
+      co.backup_error AS channel_backup_error
+    FROM channel_outputs co
+    JOIN content_items c ON c.id = co.content_item_id
+    WHERE co.channel_id = ?
+      AND co.status IN (?, ?)
+      AND co.artifact_path LIKE 'http%'
+      AND c.notion_page_id <> ''
+      AND co.backup_status <> 'backed_up'
+    ORDER BY co.updated_at ASC
+    LIMIT ?
+  `).all(channelId, CHANNEL_STATUSES.PUBLISH_PENDING, CHANNEL_STATUSES.PUBLISHED, limit);
 }
 
 /**
@@ -485,6 +526,30 @@ export function updateChannelOutputFailure(db, { id, lastError, nextRetryAt }) {
         updated_at = ?
     WHERE id = ?
   `).run(nextRetryAt, lastError, updatedAt, id);
+
+  if (result.changes === 0) {
+    throw new Error(`Channel output not found: ${id}`);
+  }
+
+  return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
+}
+
+/**
+ * Stores Notion artifact backup status on a channel output.
+ */
+export function updateChannelOutputBackup(db, { id, backupStatus, backupPayload = {}, backupError = '' }) {
+  const updatedAt = nowIso();
+  const completedAt = backupStatus === 'backed_up' ? updatedAt : null;
+
+  const result = db.prepare(`
+    UPDATE channel_outputs
+    SET backup_status = ?,
+        backup_completed_at = ?,
+        backup_payload_json = ?,
+        backup_error = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(backupStatus, completedAt, JSON.stringify(backupPayload), backupError, updatedAt, id);
 
   if (result.changes === 0) {
     throw new Error(`Channel output not found: ${id}`);

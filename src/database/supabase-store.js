@@ -94,7 +94,11 @@ function normalizeNotionSyncRow(row) {
     notion_channel_artifact_path: instagramOutput.artifact_path || '',
     notion_channel_published_url: instagramOutput.published_url || '',
     notion_channel_last_error: instagramOutput.last_error || '',
-    notion_channel_updated_at: instagramOutput.updated_at || ''
+    notion_channel_updated_at: instagramOutput.updated_at || '',
+    notion_channel_backup_status: instagramOutput.backup_status || '',
+    notion_channel_backup_completed_at: instagramOutput.backup_completed_at || '',
+    notion_channel_backup_payload_json: JSON.stringify(instagramOutput.backup_payload_json || {}),
+    notion_channel_backup_error: instagramOutput.backup_error || ''
   };
 }
 
@@ -569,6 +573,42 @@ export function createSupabaseStore(config) {
     },
 
     /**
+     * Lists public channel artifacts that have a Notion page but are not backed up to Notion files yet.
+     */
+    async listChannelOutputsReadyForNotionBackup({ channelId, limit = 10 } = {}) {
+      const rows = await request('channel_outputs', {
+        search: {
+          select: '*,content_items!inner(*)',
+          channel_id: `eq.${channelId}`,
+          status: `in.(${CHANNEL_STATUSES.PUBLISH_PENDING},${CHANNEL_STATUSES.PUBLISHED})`,
+          backup_status: 'neq.backed_up',
+          'content_items.notion_page_id': 'neq.',
+          order: 'updated_at.asc',
+          limit
+        }
+      });
+
+      return rows
+        .filter((row) => /^https?:\/\//i.test(row.artifact_path || ''))
+        .map((row) => {
+          const item = row.content_items;
+          return {
+            ...item,
+            channel_output_id: row.id,
+            output_channel_id: row.channel_id,
+            channel_status: row.status,
+            channel_payload_json: JSON.stringify(row.payload_json || {}),
+            channel_artifact_path: row.artifact_path,
+            channel_published_url: row.published_url,
+            channel_backup_status: row.backup_status || '',
+            channel_backup_completed_at: row.backup_completed_at || '',
+            channel_backup_payload_json: JSON.stringify(row.backup_payload_json || {}),
+            channel_backup_error: row.backup_error || ''
+          };
+        });
+    },
+
+    /**
      * Claims one publish-pending channel output before an external publish call.
      */
     async claimChannelOutputForPublish({ id, lockedUntil }) {
@@ -641,6 +681,26 @@ export function createSupabaseStore(config) {
           locked_until: null,
           last_error: lastError,
           updated_at: nowIso()
+        }
+      );
+
+      return normalizePayloadJson(output);
+    },
+
+    /**
+     * Stores Notion artifact backup status for a channel output.
+     */
+    async updateChannelOutputBackup({ id, backupStatus, backupPayload = {}, backupError = '' }) {
+      const timestamp = nowIso();
+      const output = await patchOne(
+        'channel_outputs',
+        { id: `eq.${id}` },
+        {
+          backup_status: backupStatus,
+          backup_completed_at: backupStatus === 'backed_up' ? timestamp : null,
+          backup_payload_json: backupPayload,
+          backup_error: backupError,
+          updated_at: timestamp
         }
       );
 

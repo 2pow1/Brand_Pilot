@@ -66,6 +66,7 @@ node --no-warnings=ExperimentalWarning src/cli.js instagram publish --mock --lim
 node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js notion check
 node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js doctor schedule
 node --no-warnings=ExperimentalWarning src/cli.js doctor discord
 node --no-warnings=ExperimentalWarning src/cli.js doctor publish
@@ -89,7 +90,7 @@ node --no-warnings=ExperimentalWarning --test
 
 `instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다.
 
-`notion check`는 Notion 토큰과 데이터소스 접근, 필수 속성 타입을 확인합니다. `notion sync`는 최근 콘텐츠 상태를 Notion 데이터소스에 생성/업데이트합니다. Notion은 읽기용 미러이며 실제 상태 관리는 Supabase/SQLite 저장소가 담당합니다. 필요한 Notion 속성은 `docs/notion-mirror.md`에 정리되어 있습니다.
+`notion check`는 Notion 토큰과 데이터소스 접근, 필수 속성 타입을 확인합니다. `notion sync`는 최근 콘텐츠 상태를 Notion 데이터소스에 생성/업데이트합니다. `notion backup`은 Supabase Storage의 공개 manifest와 PNG 카드뉴스를 Notion File Upload API로 가져와 Notion-hosted 파일로 붙입니다. Notion은 읽기용 미러이며 실제 상태 관리는 Supabase/SQLite 저장소가 담당합니다. 필요한 Notion 속성은 `docs/notion-mirror.md`에 정리되어 있습니다.
 
 `doctor schedule`은 GitHub Actions 정기 파이프라인에 필요한 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID` 설정 여부를 비밀값 노출 없이 확인합니다. Notion은 선택 동기화이므로 `doctor notion`에서 별도로 확인합니다. `doctor discord`는 Discord 버튼 수신 Edge Function에 필요한 `DISCORD_PUBLIC_KEY`와 Supabase 설정을 함께 확인합니다. `doctor publish`는 Instagram 게시에 필요한 Meta/Supabase Storage 설정을 확인하고, `META_APP_ID`와 `META_APP_SECRET`이 있으면 Meta token debugger로 access token 유효성, 만료일, 필수 Instagram 권한, 대상 Instagram business account 접근 가능 여부까지 확인합니다. 만료 임박은 경고로만 표시하고, 만료/권한 누락/계정 접근 실패는 실패로 처리합니다.
 
@@ -97,6 +98,6 @@ node --no-warnings=ExperimentalWarning --test
 
 ## 무료 우선 운영
 
-`.github/workflows/brand-pilot-schedule.yml`은 6시간마다 GitHub Actions에서 수집, 초안 생성, Discord 검수 요청, 승인된 콘텐츠의 채널 payload 생성, Instagram 카드뉴스 렌더링, Supabase Storage 업로드를 실행합니다. 카드뉴스 렌더러가 Windows PowerShell과 `System.Drawing`을 사용하므로 workflow runner는 `windows-latest`를 사용합니다.
+`.github/workflows/brand-pilot-schedule.yml`은 6시간마다 GitHub Actions에서 수집, 초안 생성, Discord 검수 요청, 승인된 콘텐츠의 채널 payload 생성, Instagram 카드뉴스 렌더링, Supabase Storage 업로드, Notion 미러/파일 백업을 실행합니다. 카드뉴스 렌더러가 Windows PowerShell과 `System.Drawing`을 사용하므로 workflow runner는 `windows-latest`를 사용합니다.
 
 GitHub Secrets에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID`를 등록합니다. 실제 Instagram 게시를 자동화할 때는 `META_ACCESS_TOKEN`, `META_APP_ID`, `META_APP_SECRET`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`도 등록합니다. Notion 미러를 함께 쓰려면 `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`도 추가합니다. GitHub Variables에는 필요하면 `OPENAI_MODEL`, `SUPABASE_STORAGE_BUCKET`, `META_TOKEN_EXPIRY_WARNING_DAYS`를 등록합니다. 실제 Instagram 게시 step은 `INSTAGRAM_PUBLISH_ENABLED=true`일 때만 실행되며, 기본값은 `false`입니다. workflow는 먼저 `doctor schedule`을 실행해 필수 설정 누락을 명확히 보고한 뒤 상태 조회와 파이프라인을 실행합니다. Discord 승인/거절 버튼 수신은 `supabase/functions/discord-review` Edge Function을 배포해 처리합니다. 자세한 Discord 설정 순서는 `docs/discord-review.md`를 참고합니다.
