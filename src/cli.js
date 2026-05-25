@@ -515,7 +515,9 @@ async function runInstagramPublish(argv) {
   const { createMockInstagramPublishResult, loadInstagramPublishInput, publishInstagramCardNews } = await import(
     './publish/instagram.js'
   );
-  const { markChannelOutputPublishFailed, markChannelOutputPublished } = await import('./repository.js');
+  const { claimChannelOutputForPublish, markChannelOutputPublishFailed, markChannelOutputPublished } = await import(
+    './repository.js'
+  );
   const { store } = await openAppDatabase();
   const rows = await store.listChannelOutputsReadyToPublish({
     channelId: 'instagram',
@@ -523,8 +525,22 @@ async function runInstagramPublish(argv) {
   });
   const published = [];
   const failed = [];
+  const skipped = [];
 
   for (const row of rows) {
+    const claimed = await claimChannelOutputForPublish(store, row, row, {
+      mode: options.mock ? 'mock' : 'instagram-graph-api'
+    });
+
+    if (!claimed) {
+      skipped.push({
+        id: row.id,
+        sourceTitle: row.source_title,
+        reason: 'publish lock is held or retry backoff is active'
+      });
+      continue;
+    }
+
     try {
       const payload = JSON.parse(row.channel_payload_json);
       const result = options.mock
@@ -571,8 +587,10 @@ async function runInstagramPublish(argv) {
   console.log(JSON.stringify({
     mode: options.mock ? 'mock' : 'instagram-graph-api',
     publishedCount: published.length,
+    skippedCount: skipped.length,
     failedCount: failed.length,
     published,
+    skipped,
     failed,
     summary: await store.summarize()
   }, null, 2));

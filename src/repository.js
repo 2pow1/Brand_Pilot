@@ -1,6 +1,10 @@
 import { fingerprint } from './ids.js';
 import { assertContentTransition, CHANNEL_STATUSES, CONTENT_STATUSES } from './state.js';
 
+const PUBLISH_LOCK_MINUTES = 30;
+const BASE_RETRY_MINUTES = 15;
+const MAX_RETRY_MINUTES = 360;
+
 /**
  * Builds the duplicate-detection fingerprint for one scraped source candidate.
  */
@@ -229,14 +233,66 @@ export async function markChannelOutputPublished(store, item, channelOutput, pub
 }
 
 /**
+ * Returns an ISO timestamp for the end of a bounded publish lock.
+ */
+export function publishLockUntil(now = new Date()) {
+  return new Date(now.getTime() + PUBLISH_LOCK_MINUTES * 60_000).toISOString();
+}
+
+/**
+ * Calculates exponential retry delay for failed publish attempts.
+ */
+export function nextPublishRetryAt(attemptCount, now = new Date()) {
+  const delayMinutes = Math.min(
+    BASE_RETRY_MINUTES * 2 ** Math.max(0, attemptCount - 1),
+    MAX_RETRY_MINUTES
+  );
+  return new Date(now.getTime() + delayMinutes * 60_000).toISOString();
+}
+
+/**
+ * Claims a channel output before calling the external publish API.
+ */
+export async function claimChannelOutputForPublish(store, item, channelOutput, payload = {}) {
+  const lockedUntil = publishLockUntil();
+  const output = await store.claimChannelOutputForPublish({
+    id: channelOutput.channel_output_id || channelOutput.id,
+    lockedUntil
+  });
+
+  if (!output) {
+    return null;
+  }
+
+  await store.insertEvent({
+    contentItemId: item.id,
+    eventType: 'content.channel.publish_claimed',
+    payload: {
+      ...payload,
+      channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+      lockedUntil
+    }
+  });
+
+  return {
+    item,
+    output
+  };
+}
+
+/**
  * Records an external publish failure while keeping the item eligible for retry.
  */
 export async function markChannelOutputPublishFailed(store, item, channelOutput, lastError, payload = {}) {
   return store.withTransaction(async () => {
+    const currentAttemptCount = channelOutput.channel_attempt_count || channelOutput.attempt_count || 0;
+    const nextAttemptCount = currentAttemptCount + 1;
+    const nextRetryAt = nextPublishRetryAt(nextAttemptCount);
     const output = await store.updateChannelOutputFailure({
       id: channelOutput.channel_output_id || channelOutput.id,
-      attemptCount: channelOutput.channel_attempt_count || channelOutput.attempt_count || 0,
-      lastError
+      attemptCount: currentAttemptCount,
+      lastError,
+      nextRetryAt
     });
 
     await store.insertEvent({
@@ -246,7 +302,8 @@ export async function markChannelOutputPublishFailed(store, item, channelOutput,
         ...payload,
         channelId: channelOutput.output_channel_id || channelOutput.channel_id,
         lastError,
-        attemptCount: output.attempt_count
+        attemptCount: output.attempt_count,
+        nextRetryAt
       }
     });
 

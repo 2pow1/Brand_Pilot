@@ -527,6 +527,8 @@ export function createSupabaseStore(config) {
           channel_artifact_path: row.artifact_path,
           channel_published_url: row.published_url,
           channel_attempt_count: row.attempt_count,
+          channel_next_retry_at: row.next_retry_at,
+          channel_locked_until: row.locked_until,
           channel_last_error: row.last_error
         };
       });
@@ -542,6 +544,7 @@ export function createSupabaseStore(config) {
           channel_id: `eq.${channelId}`,
           status: `eq.${CHANNEL_STATUSES.PUBLISH_PENDING}`,
           'content_items.status': `eq.${CONTENT_STATUSES.PUBLISH_PENDING}`,
+          and: `(or(next_retry_at.is.null,next_retry_at.lte.${nowIso()}),or(locked_until.is.null,locked_until.lte.${nowIso()}))`,
           order: 'created_at.asc',
           limit
         }
@@ -558,9 +561,33 @@ export function createSupabaseStore(config) {
           channel_artifact_path: row.artifact_path,
           channel_published_url: row.published_url,
           channel_attempt_count: row.attempt_count,
+          channel_next_retry_at: row.next_retry_at,
+          channel_locked_until: row.locked_until,
           channel_last_error: row.last_error
         };
       });
+    },
+
+    /**
+     * Claims one publish-pending channel output before an external publish call.
+     */
+    async claimChannelOutputForPublish({ id, lockedUntil }) {
+      const now = nowIso();
+      const rows = await request('channel_outputs', {
+        method: 'PATCH',
+        search: {
+          id: `eq.${id}`,
+          status: `eq.${CHANNEL_STATUSES.PUBLISH_PENDING}`,
+          and: `(or(next_retry_at.is.null,next_retry_at.lte.${now}),or(locked_until.is.null,locked_until.lte.${now}))`
+        },
+        body: {
+          locked_until: lockedUntil,
+          updated_at: now
+        },
+        prefer: 'return=representation'
+      });
+
+      return rows?.[0] ? normalizePayloadJson(rows[0]) : null;
     },
 
     /**
@@ -591,6 +618,8 @@ export function createSupabaseStore(config) {
         {
           status,
           published_url: publishedUrl,
+          next_retry_at: null,
+          locked_until: null,
           updated_at: nowIso(),
           last_error: ''
         }
@@ -602,12 +631,14 @@ export function createSupabaseStore(config) {
     /**
      * Stores a failed channel publish attempt without advancing lifecycle status.
      */
-    async updateChannelOutputFailure({ id, attemptCount = 0, lastError }) {
+    async updateChannelOutputFailure({ id, attemptCount = 0, lastError, nextRetryAt }) {
       const output = await patchOne(
         'channel_outputs',
         { id: `eq.${id}` },
         {
           attempt_count: attemptCount + 1,
+          next_retry_at: nextRetryAt,
+          locked_until: null,
           last_error: lastError,
           updated_at: nowIso()
         }

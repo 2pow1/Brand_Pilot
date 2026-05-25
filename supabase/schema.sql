@@ -49,6 +49,8 @@ create table if not exists public.channel_outputs (
   artifact_path text not null default '',
   published_url text not null default '',
   attempt_count integer not null default 0,
+  next_retry_at timestamptz,
+  locked_until timestamptz,
   last_error text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -68,6 +70,9 @@ create index if not exists idx_content_items_status
 
 create index if not exists idx_channel_outputs_status
   on public.channel_outputs(status);
+
+create index if not exists idx_channel_outputs_publish_queue
+  on public.channel_outputs(status, next_retry_at, locked_until);
 
 create index if not exists idx_events_content_item_id
   on public.events(content_item_id);

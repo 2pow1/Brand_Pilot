@@ -4,6 +4,7 @@ import { migrate, openDatabase } from '../src/db.js';
 import { createSqliteStore } from '../src/database/sqlite-store.js';
 import {
   approveContent,
+  claimChannelOutputForPublish,
   createCollectedContent,
   markChannelOutputPublishFailed,
   markChannelOutputPublished,
@@ -171,11 +172,53 @@ test('records publish failures without moving content out of publish pending', a
   assert.equal(failed.item.status, 'publish_pending');
   assert.equal(failed.output.status, 'publish_pending');
   assert.equal(failed.output.attempt_count, 1);
+  assert.ok(failed.output.next_retry_at);
+  assert.equal(failed.output.locked_until, null);
   assert.equal(failed.output.last_error, 'Token expired');
   assert.equal(
     db.prepare("SELECT COUNT(*) AS count FROM events WHERE event_type = 'content.channel.publish_failed'").get().count,
     1
   );
+
+  await store.close();
+});
+
+test('claims publish-pending outputs so concurrent publishers skip them', async () => {
+  const db = openDatabase(':memory:');
+  migrate(db);
+  const store = createSqliteStore(db);
+
+  const approved = await createApprovedItem(store);
+  const generated = await saveChannelOutputsForContent(store, approved, [
+    {
+      channelId: 'instagram',
+      payload: {
+        template: 'instagram-card-news-v1',
+        slides: []
+      }
+    }
+  ]);
+  const rendered = await markChannelOutputRendered(
+    store,
+    generated.item,
+    {
+      channel_output_id: generated.outputs[0].id,
+      output_channel_id: generated.outputs[0].channel_id
+    },
+    'https://storage.example.com/instagram/content_123/manifest.json'
+  );
+  const claimed = await claimChannelOutputForPublish(store, rendered.item, {
+    channel_output_id: rendered.output.id,
+    output_channel_id: rendered.output.channel_id
+  });
+  const readyRows = await store.listChannelOutputsReadyToPublish({
+    channelId: 'instagram',
+    limit: 10
+  });
+
+  assert.equal(claimed.output.id, rendered.output.id);
+  assert.ok(claimed.output.locked_until);
+  assert.equal(readyRows.length, 0);
 
   await store.close();
 });

@@ -5,7 +5,8 @@
 3. Run `supabase/schema.sql`.
 4. Run `supabase/storage.sql` to create the public Instagram artifact bucket.
 5. Run `supabase/notion.sql` if `schema.sql` was already applied before the Notion columns were added.
-6. Add server-side environment variables:
+6. Run `supabase/publish-lock.sql` if `schema.sql` was already applied before publish lock columns were added.
+7. Add server-side environment variables:
 
 ```text
 DATABASE_PROVIDER=supabase

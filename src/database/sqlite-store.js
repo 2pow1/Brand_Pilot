@@ -2,6 +2,7 @@ import { databasePathFromUrl } from '../config.js';
 import {
   getContentItem,
   getContentItemByFingerprint,
+  claimChannelOutputForPublish,
   insertEvent,
   insertContentItem,
   listChannelOutputsReadyToRender,
@@ -150,6 +151,13 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
      */
     async listChannelOutputsReadyToPublish(options) {
       return listChannelOutputsReadyToPublish(db, options);
+    },
+
+    /**
+     * Claims one publish-pending channel output before an external publish call.
+     */
+    async claimChannelOutputForPublish(input) {
+      return claimChannelOutputForPublish(db, input);
     },
 
     /**

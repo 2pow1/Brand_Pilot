@@ -65,6 +65,8 @@ export function migrate(db) {
       artifact_path TEXT NOT NULL DEFAULT '',
       published_url TEXT NOT NULL DEFAULT '',
       attempt_count INTEGER NOT NULL DEFAULT 0,
+      next_retry_at TEXT,
+      locked_until TEXT,
       last_error TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
@@ -88,6 +90,13 @@ export function migrate(db) {
 
   ensureColumn(db, 'content_items', 'notion_page_id', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'content_items', 'notion_synced_at', 'TEXT');
+  ensureColumn(db, 'channel_outputs', 'next_retry_at', 'TEXT');
+  ensureColumn(db, 'channel_outputs', 'locked_until', 'TEXT');
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_channel_outputs_publish_queue
+      ON channel_outputs(status, next_retry_at, locked_until);
+  `);
 }
 
 /**
@@ -355,6 +364,8 @@ export function listChannelOutputsReadyToRender(db, { channelId, limit = 10 } = 
       co.artifact_path AS channel_artifact_path,
       co.published_url AS channel_published_url,
       co.attempt_count AS channel_attempt_count,
+      co.next_retry_at AS channel_next_retry_at,
+      co.locked_until AS channel_locked_until,
       co.last_error AS channel_last_error
     FROM channel_outputs co
     JOIN content_items c ON c.id = co.content_item_id
@@ -384,9 +395,33 @@ export function listChannelOutputsReadyToPublish(db, { channelId, limit = 10 } =
     WHERE co.channel_id = ?
       AND co.status = ?
       AND c.status = ?
+      AND (co.next_retry_at IS NULL OR co.next_retry_at <= ?)
+      AND (co.locked_until IS NULL OR co.locked_until <= ?)
     ORDER BY co.created_at ASC
     LIMIT ?
-  `).all(channelId, CHANNEL_STATUSES.PUBLISH_PENDING, CONTENT_STATUSES.PUBLISH_PENDING, limit);
+  `).all(channelId, CHANNEL_STATUSES.PUBLISH_PENDING, CONTENT_STATUSES.PUBLISH_PENDING, nowIso(), nowIso(), limit);
+}
+
+/**
+ * Claims one publish-pending output for a bounded publish attempt.
+ */
+export function claimChannelOutputForPublish(db, { id, lockedUntil }) {
+  const now = nowIso();
+  const result = db.prepare(`
+    UPDATE channel_outputs
+    SET locked_until = ?,
+        updated_at = ?
+    WHERE id = ?
+      AND status = ?
+      AND (next_retry_at IS NULL OR next_retry_at <= ?)
+      AND (locked_until IS NULL OR locked_until <= ?)
+  `).run(lockedUntil, now, id, CHANNEL_STATUSES.PUBLISH_PENDING, now, now);
+
+  if (result.changes === 0) {
+    return null;
+  }
+
+  return db.prepare('SELECT * FROM channel_outputs WHERE id = ?').get(id);
 }
 
 /**
@@ -421,6 +456,8 @@ export function updateChannelOutputPublished(db, { id, status, publishedUrl }) {
     UPDATE channel_outputs
     SET status = ?,
         published_url = ?,
+        next_retry_at = NULL,
+        locked_until = NULL,
         updated_at = ?,
         last_error = ''
     WHERE id = ?
@@ -436,16 +473,18 @@ export function updateChannelOutputPublished(db, { id, status, publishedUrl }) {
 /**
  * Records a failed channel publish attempt without advancing lifecycle status.
  */
-export function updateChannelOutputFailure(db, { id, lastError }) {
+export function updateChannelOutputFailure(db, { id, lastError, nextRetryAt }) {
   const updatedAt = nowIso();
 
   const result = db.prepare(`
     UPDATE channel_outputs
     SET attempt_count = attempt_count + 1,
+        next_retry_at = ?,
+        locked_until = NULL,
         last_error = ?,
         updated_at = ?
     WHERE id = ?
-  `).run(lastError, updatedAt, id);
+  `).run(nextRetryAt, lastError, updatedAt, id);
 
   if (result.changes === 0) {
     throw new Error(`Channel output not found: ${id}`);
