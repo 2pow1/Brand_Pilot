@@ -7,7 +7,7 @@ on:
 
 jobs:
   pipeline:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 20
     permissions:
       contents: read
@@ -33,6 +33,7 @@ jobs:
       META_TOKEN_EXPIRY_WARNING_DAYS: ${{ vars.META_TOKEN_EXPIRY_WARNING_DAYS || '7' }}
       META_GRAPH_BASE_URL: https://graph.facebook.com/v25.0
       INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
+      INSTAGRAM_PUBLISH_ENABLED: ${{ vars.INSTAGRAM_PUBLISH_ENABLED || 'false' }}
 
     steps:
       - name: Checkout
@@ -60,6 +61,20 @@ jobs:
 
       - name: Generate approved channel payloads
         run: node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 3
+
+      - name: Render Instagram card news
+        run: node --no-warnings=ExperimentalWarning src/cli.js instagram render --limit 3
+
+      - name: Upload Instagram artifacts
+        run: node --no-warnings=ExperimentalWarning src/cli.js instagram upload --limit 3
+
+      - name: Verify Instagram publish configuration
+        if: ${{ env.INSTAGRAM_PUBLISH_ENABLED == 'true' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js doctor publish
+
+      - name: Publish Instagram posts
+        if: ${{ env.INSTAGRAM_PUBLISH_ENABLED == 'true' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 3
 
       - name: Sync Notion mirror
         if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
