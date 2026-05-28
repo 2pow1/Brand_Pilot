@@ -212,9 +212,9 @@ async function checkInstagramPageConnection({ config, fetchImpl }) {
   if (!matchingPage) {
     return checkResult({
       name: 'INSTAGRAM_PAGE_CONNECTION',
-      ok: false,
-      status: 'invalid',
-      message: 'No Facebook Page returned by /me/accounts is connected to the configured Instagram business account.',
+      ok: true,
+      status: 'warning',
+      message: 'No Facebook Page returned by /me/accounts is connected to the configured Instagram business account. This is expected for Instagram-login tokens; direct IG account access is the blocking check.',
       details: {
         pageCount: pages.length
       }

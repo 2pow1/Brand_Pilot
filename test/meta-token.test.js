@@ -117,7 +117,7 @@ test('publish doctor warns when app credentials are missing for expiry checks', 
   assert.match(formatDoctorReport(report), /\[warn\] META_APP_CREDENTIALS/);
 });
 
-test('publish doctor reports missing connected Facebook Page for the Instagram account', async () => {
+test('publish doctor warns when no connected Facebook Page is visible for direct Instagram tokens', async () => {
   const report = await buildDoctorReportWithRemoteChecks(BASE_CONFIG, 'publish', {
     now: new Date('2026-05-24T00:00:00.000Z'),
     fetchImpl: createMetaFetch({
@@ -139,9 +139,10 @@ test('publish doctor reports missing connected Facebook Page for the Instagram a
     })
   });
 
-  assert.equal(report.ok, false);
-  assert.deepEqual(report.missing, ['INSTAGRAM_PAGE_CONNECTION']);
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.missing, []);
   assert.match(formatDoctorReport(report), /No Facebook Page/);
+  assert.match(formatDoctorReport(report), /\[warn\] INSTAGRAM_PAGE_CONNECTION/);
 });
 
 test('publish doctor reports missing Page content creation task', async () => {
