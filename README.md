@@ -39,7 +39,7 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 
 ## 환경 변수
 
-`.env.example`을 기준으로 로컬 `.env`를 생성합니다. 실제 API 키와 토큰은 GitHub에 커밋하지 않습니다. 운영 계정 전환 시 필요한 값 확인 위치와 GitHub Secrets/Variables 적용 기준은 `docs/env-setup.md`를 참고합니다.
+`.env.example`을 기준으로 로컬 `.env`를 생성합니다. 실제 API 키와 토큰은 GitHub에 커밋하지 않습니다. 운영 계정 전환 시 필요한 값 확인 위치와 GitHub Secrets/Variables 적용 기준은 `docs/env-setup.md`를 참고합니다. Meta Developer App과 Instagram 게시 token을 처음부터 발급해야 하면 `docs/meta-instagram-setup.md`를 참고합니다.
 
 운영 환경의 상태 저장소는 Supabase Postgres를 기준으로 설계합니다. 로컬 CLI 검증은 `DATABASE_PROVIDER=sqlite`로 SQLite fallback을 사용하고, 무료 우선 운영은 GitHub Actions schedule이 `DATABASE_PROVIDER=supabase`로 CLI job을 실행합니다. 자세한 운영 DB 설계는 `docs/supabase-architecture.md`를 참고합니다.
 

@@ -219,6 +219,8 @@ node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 
 현재 Meta 인증이 막혀 있으면 이 섹션은 보류합니다. Instagram 실제 게시 전까지는 `instagram publish --mock` 또는 render/upload까지만 검증합니다.
 
+Meta Developer App이 아직 없거나 token을 처음부터 다시 발급해야 하면 `docs/meta-instagram-setup.md`의 순서를 먼저 따릅니다.
+
 확인 위치:
 
 ```text
@@ -255,6 +257,7 @@ Meta Developers
 - 운영 테스트에서는 long-lived user access token을 사용합니다.
 - token debugger에서 만료일과 scope를 확인합니다.
 - 필요한 최소 scope는 `instagram_basic`, `instagram_content_publish`입니다.
+- token 발급과 long-lived token 교환 절차는 `docs/meta-instagram-setup.md`에 정리되어 있습니다.
 
 `INSTAGRAM_BUSINESS_ACCOUNT_ID`:
 
