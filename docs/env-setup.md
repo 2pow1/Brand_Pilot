@@ -45,12 +45,12 @@ GitHub repository
 | `NOTION_TOKEN` | 선택 | Secret | Notion mirror sync |
 | `NOTION_DATA_SOURCE_ID` | 선택 | Secret | Notion 대상 data source |
 | `NOTION_VERSION` | 선택 | workflow 고정값 | 기본값 `2026-03-11` |
-| `META_ACCESS_TOKEN` | Instagram 게시 시 필요 | Secret | Instagram Graph API 게시 |
-| `META_APP_ID` | Instagram 게시 진단 시 권장 | Secret | Meta token debugger |
-| `META_APP_SECRET` | Instagram 게시 진단 시 권장 | Secret | Meta token debugger |
+| `META_ACCESS_TOKEN` | Instagram 게시 필수 | Secret | Instagram Graph API 게시 |
+| `META_APP_ID` | 진단 권장 | Secret | Meta token debugger |
+| `META_APP_SECRET` | 진단 권장 | Secret | Meta token debugger |
 | `META_TOKEN_EXPIRY_WARNING_DAYS` | 선택 | Variable | 토큰 만료 경고 기준일 |
 | `META_GRAPH_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://graph.facebook.com/v25.0` |
-| `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram 게시 시 필요 | Secret | 게시 대상 Instagram business account |
+| `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram 게시 필수 | Secret | 게시 대상 Instagram business account |
 | `INSTAGRAM_PUBLISH_ENABLED` | 불필요 | Variable | `true`일 때만 Actions에서 실제 Instagram 게시 실행 |
 
 ## Supabase
@@ -233,13 +233,25 @@ Meta Developers
 
 로컬 `.env` 값:
 
+게시 필수값:
+
 ```env
 META_ACCESS_TOKEN=
+INSTAGRAM_BUSINESS_ACCOUNT_ID=
+```
+
+진단 권장값:
+
+```env
 META_APP_ID=
 META_APP_SECRET=
+```
+
+운영 옵션값:
+
+```env
 META_TOKEN_EXPIRY_WARNING_DAYS=7
 META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
-INSTAGRAM_BUSINESS_ACCOUNT_ID=
 ```
 
 `META_APP_ID`, `META_APP_SECRET` 확인:
@@ -258,6 +270,8 @@ Meta Developers
 - token debugger에서 만료일과 scope를 확인합니다.
 - 필요한 최소 scope는 `instagram_basic`, `instagram_content_publish`입니다.
 - token 발급과 long-lived token 교환 절차는 `docs/meta-instagram-setup.md`에 정리되어 있습니다.
+
+`META_APP_ID`, `META_APP_SECRET`은 게시 자체에는 필수가 아니지만 `doctor publish`가 token debugger로 만료일과 scope를 확인할 때 필요합니다.
 
 `INSTAGRAM_BUSINESS_ACCOUNT_ID`:
 
@@ -291,7 +305,7 @@ node --no-warnings=ExperimentalWarning src/cli.js doctor publish
 
 ## GitHub Actions 설정
 
-Secrets:
+공통 필수 Secrets:
 
 ```text
 SUPABASE_URL
@@ -301,10 +315,20 @@ DISCORD_BOT_TOKEN
 DISCORD_REVIEW_CHANNEL_ID
 NOTION_TOKEN
 NOTION_DATA_SOURCE_ID
+```
+
+Instagram 게시 필수 Secrets:
+
+```text
 META_ACCESS_TOKEN
+INSTAGRAM_BUSINESS_ACCOUNT_ID
+```
+
+Instagram 진단 권장 Secrets:
+
+```text
 META_APP_ID
 META_APP_SECRET
-INSTAGRAM_BUSINESS_ACCOUNT_ID
 ```
 
 Variables:
@@ -314,6 +338,12 @@ OPENAI_MODEL
 SUPABASE_STORAGE_BUCKET
 META_TOKEN_EXPIRY_WARNING_DAYS
 INSTAGRAM_PUBLISH_ENABLED
+```
+
+workflow 고정값:
+
+```text
+META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 ```
 
 운영 기준:

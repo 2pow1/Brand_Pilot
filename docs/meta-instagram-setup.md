@@ -10,18 +10,32 @@
 
 ## 목표 값
 
-최종적으로 아래 값을 확보해 `.env`와 GitHub Actions Secrets/Variables에 넣습니다.
+Instagram 실제 게시에 필수인 값과 진단에 필요한 권장값을 분리합니다.
+
+게시 필수값:
 
 ```env
 META_ACCESS_TOKEN=
-META_APP_ID=
-META_APP_SECRET=
-META_TOKEN_EXPIRY_WARNING_DAYS=7
-META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 INSTAGRAM_BUSINESS_ACCOUNT_ID=
 ```
 
+진단 권장값:
+
+```env
+META_APP_ID=
+META_APP_SECRET=
+```
+
+운영 옵션값:
+
+```env
+META_TOKEN_EXPIRY_WARNING_DAYS=7
+META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
+```
+
 `META_ACCESS_TOKEN`은 Instagram 게시에 사용할 long-lived user access token입니다. `INSTAGRAM_BUSINESS_ACCOUNT_ID`는 Facebook Page ID가 아니라 Page에 연결된 Instagram Business/Creator account의 IG User ID입니다.
+
+`META_APP_ID`와 `META_APP_SECRET`은 게시 호출 자체에는 필수는 아니지만, `doctor publish`가 Meta token debugger로 토큰 유효성, 만료일, scope를 확인할 때 필요합니다. 운영 안정성을 위해 설정하는 것을 권장합니다.
 
 ## 사전 조건
 
@@ -48,8 +62,8 @@ Meta 공식 Getting Started 문서도 Instagram Business/Creator account, 연결
      - `pages_show_list`
      - `pages_read_engagement`
 6. 앱이 생성되면 `App settings -> Basic`으로 이동합니다.
-7. `App ID`를 `META_APP_ID`로 기록합니다.
-8. `App secret`을 표시해서 `META_APP_SECRET`으로 기록합니다.
+7. `App ID`를 진단 권장값 `META_APP_ID`로 기록합니다.
+8. `App secret`을 표시해서 진단 권장값 `META_APP_SECRET`으로 기록합니다.
 
 주의:
 
@@ -173,15 +187,25 @@ GET https://graph.facebook.com/v25.0/oauth/access_token
 
 ## 6. 로컬 `.env` 적용
 
-`.env`에 아래 값을 넣습니다.
+게시 필수값:
 
 ```env
 META_ACCESS_TOKEN=<long-lived-user-access-token>
+INSTAGRAM_BUSINESS_ACCOUNT_ID=<instagram-business-account-id>
+```
+
+진단 권장값:
+
+```env
 META_APP_ID=<app-id>
 META_APP_SECRET=<app-secret>
+```
+
+운영 옵션값:
+
+```env
 META_TOKEN_EXPIRY_WARNING_DAYS=7
 META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
-INSTAGRAM_BUSINESS_ACCOUNT_ID=<instagram-business-account-id>
 ```
 
 검증합니다.
@@ -203,6 +227,8 @@ Status: ok
 [ok] META_ACCESS_TOKEN_SCOPES
 [ok] INSTAGRAM_BUSINESS_ACCOUNT_ACCESS
 ```
+
+`META_APP_ID`와 `META_APP_SECRET`을 설정하지 않아도 `META_ACCESS_TOKEN`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`, `SUPABASE_STORAGE_BUCKET` 확인은 가능합니다. 다만 이 경우 token debugger 기반의 만료일/scope 진단은 경고로 표시됩니다.
 
 `META_ACCESS_TOKEN_SCOPES`에서 실패하면 토큰에 `instagram_basic`, `instagram_content_publish`가 없는 것입니다. Graph API Explorer에서 권한을 다시 추가하고 토큰을 재발급합니다.
 
@@ -243,13 +269,18 @@ Settings
 -> Actions
 ```
 
-Secrets:
+게시 필수 Secrets:
 
 ```text
 META_ACCESS_TOKEN
+INSTAGRAM_BUSINESS_ACCOUNT_ID
+```
+
+진단 권장 Secrets:
+
+```text
 META_APP_ID
 META_APP_SECRET
-INSTAGRAM_BUSINESS_ACCOUNT_ID
 ```
 
 Variables:
@@ -258,6 +289,8 @@ Variables:
 META_TOKEN_EXPIRY_WARNING_DAYS=7
 INSTAGRAM_PUBLISH_ENABLED=false
 ```
+
+`META_GRAPH_BASE_URL`은 workflow에서 `https://graph.facebook.com/v25.0`으로 고정되어 있으므로 GitHub Secret이나 Variable로 관리하지 않습니다.
 
 처음에는 `INSTAGRAM_PUBLISH_ENABLED=false`로 둡니다. 이 상태에서는 GitHub Actions가 render/upload까지는 진행하지만 실제 Instagram 게시 step은 건너뜁니다.
 
