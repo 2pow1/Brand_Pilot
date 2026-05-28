@@ -12,10 +12,25 @@ const BASE_CONFIG = Object.freeze({
   supabaseStorageBucket: 'brand-pilot-instagram'
 });
 
+const DEFAULT_PAGE_DATA = Object.freeze([
+  {
+    id: 'page-1',
+    name: 'Brand Page',
+    tasks: ['ANALYZE', 'CREATE_CONTENT', 'MANAGE'],
+    instagram_business_account: {
+      id: BASE_CONFIG.instagramBusinessAccountId
+    }
+  }
+]);
+
 /**
- * Creates a fetch double that returns token debug and Instagram account responses.
+ * Creates a fetch double that returns token debug, Instagram account, and Page responses.
  */
-function createMetaFetch({ debugData, accountData = { id: BASE_CONFIG.instagramBusinessAccountId, username: 'brand' } }) {
+function createMetaFetch({
+  debugData,
+  accountData = { id: BASE_CONFIG.instagramBusinessAccountId },
+  pageData = DEFAULT_PAGE_DATA
+}) {
   return async (url) => {
     const parsed = new URL(String(url));
 
@@ -25,6 +40,10 @@ function createMetaFetch({ debugData, accountData = { id: BASE_CONFIG.instagramB
 
     if (parsed.pathname.endsWith(`/${BASE_CONFIG.instagramBusinessAccountId}`)) {
       return Response.json(accountData);
+    }
+
+    if (parsed.pathname.endsWith('/me/accounts')) {
+      return Response.json({ data: pageData });
     }
 
     return Response.json({ error: { message: 'unexpected endpoint' } }, { status: 404 });
@@ -96,4 +115,58 @@ test('publish doctor warns when app credentials are missing for expiry checks', 
   assert.equal(report.ok, true);
   assert.deepEqual(report.missing, []);
   assert.match(formatDoctorReport(report), /\[warn\] META_APP_CREDENTIALS/);
+});
+
+test('publish doctor reports missing connected Facebook Page for the Instagram account', async () => {
+  const report = await buildDoctorReportWithRemoteChecks(BASE_CONFIG, 'publish', {
+    now: new Date('2026-05-24T00:00:00.000Z'),
+    fetchImpl: createMetaFetch({
+      debugData: {
+        is_valid: true,
+        expires_at: Date.parse('2026-06-24T00:00:00.000Z') / 1000,
+        scopes: ['instagram_basic', 'instagram_content_publish']
+      },
+      pageData: [
+        {
+          id: 'page-2',
+          name: 'Other Page',
+          tasks: ['ANALYZE', 'CREATE_CONTENT'],
+          instagram_business_account: {
+            id: '17841499999999999'
+          }
+        }
+      ]
+    })
+  });
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.missing, ['INSTAGRAM_PAGE_CONNECTION']);
+  assert.match(formatDoctorReport(report), /No Facebook Page/);
+});
+
+test('publish doctor reports missing Page content creation task', async () => {
+  const report = await buildDoctorReportWithRemoteChecks(BASE_CONFIG, 'publish', {
+    now: new Date('2026-05-24T00:00:00.000Z'),
+    fetchImpl: createMetaFetch({
+      debugData: {
+        is_valid: true,
+        expires_at: Date.parse('2026-06-24T00:00:00.000Z') / 1000,
+        scopes: ['instagram_basic', 'instagram_content_publish']
+      },
+      pageData: [
+        {
+          id: 'page-1',
+          name: 'Brand Page',
+          tasks: ['ANALYZE'],
+          instagram_business_account: {
+            id: BASE_CONFIG.instagramBusinessAccountId
+          }
+        }
+      ]
+    })
+  });
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.missing, ['INSTAGRAM_PAGE_CONNECTION']);
+  assert.match(formatDoctorReport(report), /CREATE_CONTENT/);
 });
