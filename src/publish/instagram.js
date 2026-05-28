@@ -3,6 +3,10 @@ import { join } from 'node:path';
 
 const MIN_CAROUSEL_IMAGES = 2;
 const MAX_CAROUSEL_IMAGES = 10;
+const DEFAULT_CONTAINER_MAX_POLLS = 10;
+const DEFAULT_CONTAINER_POLL_INTERVAL_MS = 2000;
+const FINISHED_CONTAINER_STATUS = 'FINISHED';
+const ERROR_CONTAINER_STATUS = 'ERROR';
 
 /**
  * Normalizes the Meta Graph API base URL before appending endpoint paths.
@@ -163,6 +167,15 @@ async function graphGet({ config, path, params = {}, fetchImpl = fetch }) {
 }
 
 /**
+ * Resolves after the requested delay so Meta media containers can finish processing.
+ */
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/**
  * Creates an Instagram media container for either a standalone image or carousel child.
  */
 async function createImageContainer({ config, imageUrl, carouselItem, caption, fetchImpl }) {
@@ -213,6 +226,50 @@ async function createCarouselContainer({ config, children, caption, fetchImpl })
 }
 
 /**
+ * Waits until Meta reports that a media container can be published.
+ */
+async function waitForContainerReady({
+  config,
+  creationId,
+  fetchImpl,
+  maxPolls = DEFAULT_CONTAINER_MAX_POLLS,
+  pollIntervalMs = DEFAULT_CONTAINER_POLL_INTERVAL_MS,
+  sleepImpl = sleep
+}) {
+  let lastStatus = '';
+  let lastStatusCode = '';
+
+  for (let attempt = 0; attempt <= maxPolls; attempt += 1) {
+    const payload = await graphGet({
+      config,
+      path: creationId,
+      params: {
+        fields: 'status,status_code'
+      },
+      fetchImpl
+    });
+    lastStatus = payload.status || '';
+    lastStatusCode = payload.status_code || '';
+
+    if (lastStatusCode === FINISHED_CONTAINER_STATUS) {
+      return payload;
+    }
+
+    if (lastStatusCode === ERROR_CONTAINER_STATUS) {
+      throw new Error(`Instagram media container failed: ${lastStatus || lastStatusCode}`);
+    }
+
+    if (attempt === maxPolls) break;
+
+    if (pollIntervalMs > 0) {
+      await sleepImpl(pollIntervalMs);
+    }
+  }
+
+  throw new Error(`Instagram media container was not ready in time: ${lastStatus || lastStatusCode || creationId}`);
+}
+
+/**
  * Publishes a prepared Instagram media container.
  */
 async function publishContainer({ config, creationId, fetchImpl }) {
@@ -255,7 +312,15 @@ async function getPermalink({ config, mediaId, fetchImpl }) {
 /**
  * Publishes a one-image post or a 2-10 image carousel to Instagram.
  */
-export async function publishInstagramCardNews({ config, imageUrls, caption, fetchImpl = fetch }) {
+export async function publishInstagramCardNews({
+  config,
+  imageUrls,
+  caption,
+  fetchImpl = fetch,
+  maxContainerPolls = DEFAULT_CONTAINER_MAX_POLLS,
+  containerPollIntervalMs = DEFAULT_CONTAINER_POLL_INTERVAL_MS,
+  sleepImpl = sleep
+}) {
   assertConfig(config);
 
   if (imageUrls.length === 1) {
@@ -265,6 +330,14 @@ export async function publishInstagramCardNews({ config, imageUrls, caption, fet
       carouselItem: false,
       caption,
       fetchImpl
+    });
+    await waitForContainerReady({
+      config,
+      creationId,
+      fetchImpl,
+      maxPolls: maxContainerPolls,
+      pollIntervalMs: containerPollIntervalMs,
+      sleepImpl
     });
     const mediaId = await publishContainer({ config, creationId, fetchImpl });
     const permalink = await getPermalink({ config, mediaId, fetchImpl });
@@ -296,6 +369,14 @@ export async function publishInstagramCardNews({ config, imageUrls, caption, fet
     children: childContainerIds,
     caption,
     fetchImpl
+  });
+  await waitForContainerReady({
+    config,
+    creationId: containerId,
+    fetchImpl,
+    maxPolls: maxContainerPolls,
+    pollIntervalMs: containerPollIntervalMs,
+    sleepImpl
   });
   const mediaId = await publishContainer({ config, creationId: containerId, fetchImpl });
   const permalink = await getPermalink({ config, mediaId, fetchImpl });
