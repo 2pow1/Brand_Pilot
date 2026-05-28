@@ -2,6 +2,9 @@ const DEFAULT_REQUIRED_SCOPES = Object.freeze([
   'instagram_basic',
   'instagram_content_publish'
 ]);
+const REQUIRED_PAGE_TASKS = Object.freeze([
+  'CREATE_CONTENT'
+]);
 
 /**
  * Normalizes the Meta Graph API base URL before appending endpoint paths.
@@ -171,7 +174,7 @@ async function checkInstagramAccountAccess({ config, fetchImpl }) {
     config,
     path: config.instagramBusinessAccountId,
     params: {
-      fields: 'id,username'
+      fields: 'id'
     },
     fetchImpl
   });
@@ -181,11 +184,58 @@ async function checkInstagramAccountAccess({ config, fetchImpl }) {
     ok: payload.id === config.instagramBusinessAccountId,
     status: payload.id === config.instagramBusinessAccountId ? 'ok' : 'invalid',
     message: payload.id === config.instagramBusinessAccountId
-      ? `Connected to Instagram account${payload.username ? ` @${payload.username}` : ''}.`
+      ? 'Connected to configured Instagram business account.'
       : 'Meta returned a different Instagram business account id.',
     details: {
-      id: payload.id || '',
-      username: payload.username || ''
+      id: payload.id || ''
+    }
+  });
+}
+
+/**
+ * Verifies that the token can see a Facebook Page connected to the configured IG account.
+ */
+async function checkInstagramPageConnection({ config, fetchImpl }) {
+  const payload = await graphGet({
+    config,
+    path: 'me/accounts',
+    params: {
+      fields: 'id,name,tasks,instagram_business_account{id}'
+    },
+    fetchImpl
+  });
+  const pages = Array.isArray(payload.data) ? payload.data : [];
+  const matchingPage = pages.find((page) => (
+    page.instagram_business_account?.id === config.instagramBusinessAccountId
+  ));
+
+  if (!matchingPage) {
+    return checkResult({
+      name: 'INSTAGRAM_PAGE_CONNECTION',
+      ok: false,
+      status: 'invalid',
+      message: 'No Facebook Page returned by /me/accounts is connected to the configured Instagram business account.',
+      details: {
+        pageCount: pages.length
+      }
+    });
+  }
+
+  const tasks = Array.isArray(matchingPage.tasks) ? matchingPage.tasks : [];
+  const missingTasks = REQUIRED_PAGE_TASKS.filter((task) => !tasks.includes(task));
+
+  return checkResult({
+    name: 'INSTAGRAM_PAGE_CONNECTION',
+    ok: missingTasks.length === 0,
+    status: missingTasks.length === 0 ? 'ok' : 'missing_scope',
+    message: missingTasks.length === 0
+      ? `Connected through Facebook Page "${matchingPage.name || matchingPage.id}".`
+      : `Connected Page is missing required task(s): ${missingTasks.join(', ')}`,
+    details: {
+      pageId: matchingPage.id || '',
+      pageName: matchingPage.name || '',
+      tasks,
+      missingTasks
     }
   });
 }
@@ -212,6 +262,17 @@ export async function buildMetaPublishChecks({ config, fetchImpl = fetch, now = 
   } catch (error) {
     checks.push(checkResult({
       name: 'INSTAGRAM_BUSINESS_ACCOUNT_ACCESS',
+      ok: false,
+      status: 'invalid',
+      message: error.message
+    }));
+  }
+
+  try {
+    checks.push(await checkInstagramPageConnection({ config, fetchImpl }));
+  } catch (error) {
+    checks.push(checkResult({
+      name: 'INSTAGRAM_PAGE_CONNECTION',
       ok: false,
       status: 'invalid',
       message: error.message
