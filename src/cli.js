@@ -29,6 +29,7 @@ Usage:
   node src/cli.js notion check
   node src/cli.js notion sync [--limit <n>]
   node src/cli.js notion backup [--limit <n>]
+  node src/cli.js storage cleanup [--dry-run] [--confirm] [--limit <n>]
   node src/cli.js doctor [schedule|discord|publish|notion]
   node src/cli.js transitions
 `);
@@ -39,6 +40,7 @@ Usage:
  */
 function parseOptions(argv) {
   const options = {
+    confirm: false,
     dryRun: false,
     mock: false,
     limit: 10
@@ -47,7 +49,9 @@ function parseOptions(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
 
-    if (arg === '--dry-run') {
+    if (arg === '--confirm') {
+      options.confirm = true;
+    } else if (arg === '--dry-run') {
       options.dryRun = true;
     } else if (arg === '--mock') {
       options.mock = true;
@@ -843,6 +847,103 @@ async function runNotion(argv) {
 }
 
 /**
+ * Deletes backed-up Instagram artifact files from Supabase Storage after a safe dry-run by default.
+ */
+async function runStorageCleanup(argv) {
+  const options = parseOptions(argv);
+  if (options.confirm && options.dryRun) {
+    throw new Error('Use either --confirm or --dry-run, not both');
+  }
+
+  const config = loadConfig();
+  const { cleanupInstagramRenderArtifact } = await import('./storage/supabase.js');
+  const { markChannelOutputStorageCleaned } = await import('./repository.js');
+  const { store } = await openAppDatabase();
+  const rows = await store.listChannelOutputsReadyForStorageCleanup({
+    channelId: 'instagram',
+    limit: options.limit
+  });
+  const dryRun = !options.confirm;
+  const candidates = [];
+  const cleaned = [];
+  const failed = [];
+
+  for (const row of rows) {
+    try {
+      const result = await cleanupInstagramRenderArtifact({
+        config,
+        row,
+        dryRun
+      });
+
+      if (dryRun) {
+        candidates.push({
+          id: row.id,
+          sourceTitle: row.source_title,
+          channelId: row.output_channel_id,
+          channelStatus: row.channel_status,
+          backupStatus: row.channel_backup_status,
+          artifactPath: row.channel_artifact_path,
+          objectCount: result.objectPaths.length,
+          objectPaths: result.objectPaths
+        });
+        continue;
+      }
+
+      const saved = await markChannelOutputStorageCleaned(store, row, row, {
+        mode: 'supabase-storage-cleanup',
+        bucket: result.bucket,
+        manifestUrl: result.manifestUrl,
+        objectPaths: result.objectPaths,
+        deletedCount: result.deletedCount
+      });
+
+      cleaned.push({
+        id: saved.item.id,
+        sourceTitle: saved.item.source_title,
+        channelId: saved.output.channel_id,
+        channelStatus: saved.output.status,
+        artifactPath: saved.output.artifact_path,
+        deletedCount: result.deletedCount
+      });
+    } catch (error) {
+      failed.push({
+        id: row.id,
+        sourceTitle: row.source_title,
+        channelId: row.output_channel_id,
+        error: error.message
+      });
+    }
+  }
+
+  printDatabaseInfo(store);
+  console.log(JSON.stringify({
+    mode: dryRun ? 'dry-run' : 'confirmed',
+    candidateCount: candidates.length,
+    cleanedCount: cleaned.length,
+    failedCount: failed.length,
+    candidates,
+    cleaned,
+    failed,
+    summary: await store.summarize()
+  }, null, 2));
+  await store.close();
+}
+
+/**
+ * Dispatches Storage maintenance subcommands.
+ */
+async function runStorage(argv) {
+  const action = argv[0];
+
+  if (action === 'cleanup') {
+    await runStorageCleanup(argv.slice(1));
+  } else {
+    throw new Error('storage command must be: cleanup');
+  }
+}
+
+/**
  * Prints the allowed content status transition table.
  */
 function runTransitions() {
@@ -885,6 +986,7 @@ async function main() {
   else if (command === 'channel') await runChannel(args);
   else if (command === 'instagram') await runInstagram(args);
   else if (command === 'notion') await runNotion(args);
+  else if (command === 'storage') await runStorage(args);
   else if (command === 'doctor') await runDoctor(args);
   else if (command === 'transitions') runTransitions();
   else {

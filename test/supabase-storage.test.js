@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { uploadInstagramRenderArtifact } from '../src/storage/supabase.js';
+import {
+  cleanupInstagramRenderArtifact,
+  objectPathFromPublicUrl,
+  uploadInstagramRenderArtifact
+} from '../src/storage/supabase.js';
 
 const config = {
   supabaseUrl: 'https://project.supabase.co',
@@ -114,4 +118,128 @@ test('skips upload when the artifact path is already public', async () => {
 
   assert.equal(result.uploaded, false);
   assert.equal(result.manifestPublicUrl, 'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/manifest.json');
+});
+
+test('extracts object paths from Supabase public object URLs', () => {
+  const objectPath = objectPathFromPublicUrl({
+    config,
+    bucket: 'brand-pilot-instagram',
+    publicUrl:
+      'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/instagram/content_123/channel_456/slide%2001.png'
+  });
+
+  assert.equal(objectPath, 'instagram/content_123/channel_456/slide 01.png');
+});
+
+test('dry-runs backed-up Instagram artifact cleanup', async () => {
+  const manifestUrl =
+    'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/instagram/content_123/channel_456/manifest.json';
+  const result = await cleanupInstagramRenderArtifact({
+    config,
+    row: {
+      id: 'content_123',
+      channel_output_id: 'channel_456',
+      channel_artifact_path: manifestUrl
+    },
+    dryRun: true,
+    fetchImpl: async (url) => {
+      assert.equal(String(url), manifestUrl);
+      return Response.json({
+        storage: {
+          bucket: 'brand-pilot-instagram',
+          manifestObjectPath: 'instagram/content_123/channel_456/manifest.json'
+        },
+        slides: [
+          {
+            objectPath: 'instagram/content_123/channel_456/slide-01.png',
+            publicUrl:
+              'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/instagram/content_123/channel_456/slide-01.png'
+          },
+          {
+            publicUrl:
+              'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/instagram/content_123/channel_456/slide-02.png'
+          }
+        ]
+      });
+    }
+  });
+
+  assert.equal(result.dryRun, true);
+  assert.deepEqual(result.objectPaths, [
+    'instagram/content_123/channel_456/manifest.json',
+    'instagram/content_123/channel_456/slide-01.png',
+    'instagram/content_123/channel_456/slide-02.png'
+  ]);
+});
+
+test('deletes backed-up Instagram artifact objects from Supabase Storage', async () => {
+  const manifestUrl =
+    'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/instagram/content_123/channel_456/manifest.json';
+  const calls = [];
+  const result = await cleanupInstagramRenderArtifact({
+    config,
+    row: {
+      id: 'content_123',
+      channel_output_id: 'channel_456',
+      channel_artifact_path: manifestUrl
+    },
+    dryRun: false,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({
+        url: String(url),
+        method: options.method || 'GET',
+        headers: options.headers || {},
+        body: options.body ? JSON.parse(options.body) : null
+      });
+
+      if (!options.method) {
+        return Response.json({
+          storage: {
+            bucket: 'brand-pilot-instagram',
+            manifestObjectPath: 'instagram/content_123/channel_456/manifest.json'
+          },
+          slides: [
+            {
+              objectPath: 'instagram/content_123/channel_456/slide-01.png'
+            }
+          ]
+        });
+      }
+
+      return Response.json([{ name: 'slide-01.png' }]);
+    }
+  });
+
+  assert.equal(result.dryRun, false);
+  assert.equal(result.deletedCount, 2);
+  assert.equal(calls[1].method, 'DELETE');
+  assert.equal(calls[1].headers.Authorization, 'Bearer service-role-key');
+  assert.deepEqual(calls[1].body.prefixes, [
+    'instagram/content_123/channel_456/manifest.json',
+    'instagram/content_123/channel_456/slide-01.png'
+  ]);
+});
+
+test('refuses to clean objects outside the expected content prefix', async () => {
+  const manifestUrl =
+    'https://project.supabase.co/storage/v1/object/public/brand-pilot-instagram/instagram/content_123/channel_456/manifest.json';
+
+  await assert.rejects(
+    cleanupInstagramRenderArtifact({
+      config,
+      row: {
+        id: 'content_123',
+        channel_output_id: 'channel_456',
+        channel_artifact_path: manifestUrl
+      },
+      fetchImpl: async () =>
+        Response.json({
+          storage: {
+            manifestObjectPath: 'instagram/other/channel_456/manifest.json'
+          },
+          slides: []
+        })
+    }),
+    /outside expected prefix/
+  );
 });

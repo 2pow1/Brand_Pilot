@@ -609,6 +609,42 @@ export function createSupabaseStore(config) {
     },
 
     /**
+     * Lists backed-up public channel artifacts that can be removed from Supabase Storage.
+     */
+    async listChannelOutputsReadyForStorageCleanup({ channelId, limit = 10 } = {}) {
+      const rows = await request('channel_outputs', {
+        search: {
+          select: '*,content_items!inner(*)',
+          channel_id: `eq.${channelId}`,
+          status: `eq.${CHANNEL_STATUSES.PUBLISHED}`,
+          backup_status: 'eq.backed_up',
+          'content_items.status': `eq.${CONTENT_STATUSES.PUBLISHED}`,
+          order: 'updated_at.asc',
+          limit
+        }
+      });
+
+      return rows
+        .filter((row) => /^https?:\/\//i.test(row.artifact_path || ''))
+        .map((row) => {
+          const item = row.content_items;
+          return {
+            ...item,
+            channel_output_id: row.id,
+            output_channel_id: row.channel_id,
+            channel_status: row.status,
+            channel_payload_json: JSON.stringify(row.payload_json || {}),
+            channel_artifact_path: row.artifact_path,
+            channel_published_url: row.published_url,
+            channel_backup_status: row.backup_status || '',
+            channel_backup_completed_at: row.backup_completed_at || '',
+            channel_backup_payload_json: JSON.stringify(row.backup_payload_json || {}),
+            channel_backup_error: row.backup_error || ''
+          };
+        });
+    },
+
+    /**
      * Claims one publish-pending channel output before an external publish call.
      */
     async claimChannelOutputForPublish({ id, lockedUntil }) {

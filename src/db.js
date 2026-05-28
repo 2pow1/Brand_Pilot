@@ -246,6 +246,35 @@ export function listChannelOutputsReadyForNotionBackup(db, { channelId, limit = 
 }
 
 /**
+ * Lists backed-up public channel artifacts that can be removed from Supabase Storage.
+ */
+export function listChannelOutputsReadyForStorageCleanup(db, { channelId, limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT
+      c.*,
+      co.id AS channel_output_id,
+      co.channel_id AS output_channel_id,
+      co.status AS channel_status,
+      co.payload_json AS channel_payload_json,
+      co.artifact_path AS channel_artifact_path,
+      co.published_url AS channel_published_url,
+      co.backup_status AS channel_backup_status,
+      co.backup_completed_at AS channel_backup_completed_at,
+      co.backup_payload_json AS channel_backup_payload_json,
+      co.backup_error AS channel_backup_error
+    FROM channel_outputs co
+    JOIN content_items c ON c.id = co.content_item_id
+    WHERE co.channel_id = ?
+      AND co.status = ?
+      AND c.status = ?
+      AND co.artifact_path LIKE 'http%'
+      AND co.backup_status = 'backed_up'
+    ORDER BY co.updated_at ASC
+    LIMIT ?
+  `).all(channelId, CHANNEL_STATUSES.PUBLISHED, CONTENT_STATUSES.PUBLISHED, limit);
+}
+
+/**
  * Stores draft fields and advances the local content row to draft_created.
  */
 export function updateContentDraft(db, { id, draftTitle, draftBody, status, eventType, payload = {} }) {

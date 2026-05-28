@@ -14,6 +14,7 @@
     "channel": "node --no-warnings=ExperimentalWarning src/cli.js channel",
     "instagram": "node --no-warnings=ExperimentalWarning src/cli.js instagram",
     "notion": "node --no-warnings=ExperimentalWarning src/cli.js notion",
+    "storage": "node --no-warnings=ExperimentalWarning src/cli.js storage",
     "doctor": "node --no-warnings=ExperimentalWarning src/cli.js doctor",
     "test": "node --no-warnings=ExperimentalWarning --test"
   },

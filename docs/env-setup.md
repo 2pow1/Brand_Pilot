@@ -205,6 +205,7 @@ node --no-warnings=ExperimentalWarning src/cli.js doctor notion
 node --no-warnings=ExperimentalWarning src/cli.js notion check
 node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --limit 10
 ```
 
 주의:
@@ -213,6 +214,7 @@ node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 - 실제 상태 전이는 Supabase 또는 SQLite 저장소가 담당합니다.
 - GitHub Actions에서는 `NOTION_TOKEN`과 `NOTION_DATA_SOURCE_ID`가 둘 다 있을 때만 Notion sync/backup step을 실행합니다.
 - `notion backup`은 Supabase Storage public manifest와 PNG를 Notion File Upload API로 가져와 `Artifact Files`에 붙입니다.
+- `storage cleanup`은 Notion backup이 완료된 `published` Instagram 산출물만 Supabase Storage에서 정리합니다. 기본값은 dry-run이고 실제 삭제는 `--confirm`이 필요합니다.
 - 필요한 Notion 속성은 `docs/notion-mirror.md`를 기준으로 맞춥니다.
 
 ## Meta / Instagram

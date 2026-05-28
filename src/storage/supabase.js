@@ -47,6 +47,13 @@ function storageObjectUrl({ config, bucket, objectPath }) {
 }
 
 /**
+ * Builds the authenticated Storage API URL used for bulk deletion.
+ */
+function storageBucketObjectUrl({ config, bucket }) {
+  return `${trimTrailingSlash(config.supabaseUrl)}/storage/v1/object/${encodeURIComponent(bucket)}`;
+}
+
+/**
  * Chooses a supported MIME type for rendered Instagram artifacts.
  */
 function contentTypeFor(path) {
@@ -106,6 +113,128 @@ function buildStoragePath({ row, fileName }) {
   const contentItemId = row.id;
   const channelOutputId = row.channel_output_id || 'channel';
   return `instagram/${contentItemId}/${channelOutputId}/${fileName}`;
+}
+
+/**
+ * Returns the Storage object prefix that belongs to one Instagram channel output.
+ */
+function buildStoragePrefix(row) {
+  return buildStoragePath({ row, fileName: '' });
+}
+
+/**
+ * Extracts a Supabase Storage object path from a public object URL.
+ */
+export function objectPathFromPublicUrl({ config, bucket, publicUrl }) {
+  if (!isHttpUrl(publicUrl)) return '';
+
+  let parsed;
+  try {
+    parsed = new URL(publicUrl);
+  } catch {
+    return '';
+  }
+
+  const expectedBase = new URL(trimTrailingSlash(config.supabaseUrl));
+  if (parsed.origin !== expectedBase.origin) {
+    return '';
+  }
+
+  const bucketPrefix = `/storage/v1/object/public/${bucket}/`;
+  const encodedBucketPrefix = `/storage/v1/object/public/${encodeURIComponent(bucket)}/`;
+  const path = parsed.pathname;
+  const prefix = path.startsWith(bucketPrefix)
+    ? bucketPrefix
+    : path.startsWith(encodedBucketPrefix)
+      ? encodedBucketPrefix
+      : '';
+
+  if (!prefix) return '';
+
+  return path
+    .slice(prefix.length)
+    .split('/')
+    .map((segment) => decodeURIComponent(segment))
+    .join('/');
+}
+
+/**
+ * Fetches a public render manifest from Supabase Storage.
+ */
+async function fetchPublicManifest({ manifestUrl, fetchImpl = fetch }) {
+  const response = await fetchImpl(manifestUrl);
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(text || `Failed to fetch Supabase Storage manifest: HTTP ${response.status}`);
+  }
+
+  return JSON.parse(text.replace(/^\uFEFF/, ''));
+}
+
+/**
+ * Builds the object path set that can be safely deleted for one backed-up artifact.
+ */
+export function buildInstagramCleanupObjectPaths({ config, bucket, row, manifestUrl, manifest }) {
+  const expectedPrefix = buildStoragePrefix(row);
+  const paths = new Set();
+  const addPath = (objectPath) => {
+    if (!objectPath) return;
+    if (!objectPath.startsWith(expectedPrefix)) {
+      throw new Error(`Refusing to delete object outside expected prefix: ${objectPath}`);
+    }
+    paths.add(objectPath);
+  };
+
+  addPath(manifest.storage?.manifestObjectPath);
+  addPath(objectPathFromPublicUrl({ config, bucket, publicUrl: manifestUrl }));
+
+  for (const slide of manifest.slides || []) {
+    if (typeof slide === 'string') {
+      addPath(objectPathFromPublicUrl({ config, bucket, publicUrl: slide }));
+      continue;
+    }
+
+    addPath(slide.objectPath);
+    addPath(objectPathFromPublicUrl({ config, bucket, publicUrl: slide.publicUrl || slide.url || slide.imageUrl }));
+  }
+
+  return [...paths];
+}
+
+/**
+ * Deletes Supabase Storage objects through the Storage API.
+ */
+export async function deleteStorageObjects({ config, bucket, objectPaths, fetchImpl = fetch }) {
+  requireConfigValue(config, 'supabaseUrl', 'SUPABASE_URL');
+  requireConfigValue(config, 'supabaseServiceRoleKey', 'SUPABASE_SERVICE_ROLE_KEY');
+
+  if (objectPaths.length === 0) {
+    return [];
+  }
+
+  if (objectPaths.length > 1000) {
+    throw new Error('Supabase Storage delete supports at most 1000 objects per request');
+  }
+
+  const response = await fetchImpl(storageBucketObjectUrl({ config, bucket }), {
+    method: 'DELETE',
+    headers: {
+      apikey: config.supabaseServiceRoleKey,
+      Authorization: `Bearer ${config.supabaseServiceRoleKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      prefixes: objectPaths
+    })
+  });
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(text || `Supabase Storage delete failed: HTTP ${response.status}`);
+  }
+
+  return text ? JSON.parse(text) : [];
 }
 
 /**
@@ -221,5 +350,62 @@ export async function uploadInstagramRenderArtifact({ config, row, payload, fetc
     manifestObjectPath,
     manifestPublicUrl: publicObjectUrl({ config, bucket, objectPath: manifestObjectPath }),
     slides: uploadedSlides
+  };
+}
+
+/**
+ * Deletes a backed-up Instagram render artifact from Supabase Storage.
+ */
+export async function cleanupInstagramRenderArtifact({ config, row, dryRun = true, fetchImpl = fetch }) {
+  const bucket = config.supabaseStorageBucket;
+  if (!bucket) {
+    throw new Error('SUPABASE_STORAGE_BUCKET is required for Supabase Storage cleanup');
+  }
+
+  const manifestUrl = row.channel_artifact_path;
+  if (!isHttpUrl(manifestUrl)) {
+    throw new Error('Storage cleanup requires a public Supabase Storage manifest URL');
+  }
+
+  const manifest = await fetchPublicManifest({
+    manifestUrl,
+    fetchImpl
+  });
+  const objectPaths = buildInstagramCleanupObjectPaths({
+    config,
+    bucket,
+    row,
+    manifestUrl,
+    manifest
+  });
+
+  if (objectPaths.length === 0) {
+    throw new Error('Storage cleanup found no object paths in the render manifest');
+  }
+
+  if (dryRun) {
+    return {
+      dryRun: true,
+      bucket,
+      manifestUrl,
+      objectPaths,
+      deletedCount: 0
+    };
+  }
+
+  const deleted = await deleteStorageObjects({
+    config,
+    bucket,
+    objectPaths,
+    fetchImpl
+  });
+
+  return {
+    dryRun: false,
+    bucket,
+    manifestUrl,
+    objectPaths,
+    deleted,
+    deletedCount: objectPaths.length
   };
 }

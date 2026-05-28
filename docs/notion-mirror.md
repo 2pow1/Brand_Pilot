@@ -92,7 +92,33 @@ node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 3. Notion page의 `Artifact Files` 속성에 Notion-hosted file로 붙입니다.
 4. `channel_outputs.backup_status`, `backup_completed_at`, `backup_payload_json`을 갱신합니다.
 
-이 단계가 성공한 뒤에야 해당 카드뉴스 파일은 Supabase Storage 정리 후보가 됩니다. 아직 Storage 삭제 자동화는 별도 단계로 두며, 먼저 백업 상태가 충분히 쌓이는지 확인합니다.
+이 단계가 성공한 뒤에야 해당 카드뉴스 파일은 Supabase Storage 정리 후보가 됩니다.
+
+## Storage Cleanup
+
+```powershell
+node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --confirm --limit 10
+```
+
+`storage cleanup`은 Supabase Storage 용량 확보용 유지보수 명령입니다. 기본 실행은 dry-run이며, 실제 삭제는 `--confirm`이 있을 때만 수행합니다.
+
+정리 대상 조건:
+
+- content item 상태가 `published`여야 합니다.
+- Instagram channel output 상태가 `published`여야 합니다.
+- channel output의 `backup_status`가 `backed_up`이어야 합니다.
+- `artifact_path`가 Supabase Storage public manifest URL이어야 합니다.
+
+정리 과정:
+
+1. Supabase DB에서 조건을 만족하는 channel output을 조회합니다.
+2. public manifest를 읽어 manifest와 slide PNG object path를 계산합니다.
+3. dry-run이면 삭제 후보만 출력합니다.
+4. `--confirm`이면 Supabase Storage API로 해당 object들을 삭제합니다.
+5. 삭제가 성공하면 `channel_outputs.artifact_path`를 빈 값으로 바꾸고 `content.storage.cleaned` 이벤트를 기록합니다.
+
+DB row는 삭제하지 않습니다. 이 명령은 Storage 파일만 정리하며, Notion에는 이미 import된 파일이 남아 있어야 합니다.
 
 ## GitHub Actions
 

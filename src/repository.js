@@ -415,3 +415,38 @@ export async function markChannelOutputNotionBackupFailed(store, item, channelOu
     };
   });
 }
+
+/**
+ * Records that backed-up Storage artifacts were removed while keeping the content published.
+ */
+export async function markChannelOutputStorageCleaned(store, item, channelOutput, payload = {}) {
+  if (item.status !== CONTENT_STATUSES.PUBLISHED) {
+    throw new Error(`Expected published content before storage cleanup, received: ${item.status}`);
+  }
+
+  if ((channelOutput.channel_backup_status || channelOutput.backup_status) !== 'backed_up') {
+    throw new Error('Storage cleanup requires channel artifact backup_status=backed_up');
+  }
+
+  return store.withTransaction(async () => {
+    const output = await store.updateChannelOutputArtifact({
+      id: channelOutput.channel_output_id || channelOutput.id,
+      status: channelOutput.channel_status || channelOutput.status,
+      artifactPath: ''
+    });
+
+    await store.insertEvent({
+      contentItemId: item.id,
+      eventType: 'content.storage.cleaned',
+      payload: {
+        channelId: channelOutput.output_channel_id || channelOutput.channel_id,
+        ...payload
+      }
+    });
+
+    return {
+      item,
+      output
+    };
+  });
+}

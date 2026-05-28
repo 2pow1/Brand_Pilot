@@ -67,6 +67,8 @@ node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1
 node --no-warnings=ExperimentalWarning src/cli.js notion check
 node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --confirm --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js doctor schedule
 node --no-warnings=ExperimentalWarning src/cli.js doctor discord
 node --no-warnings=ExperimentalWarning src/cli.js doctor publish
@@ -91,6 +93,8 @@ node --no-warnings=ExperimentalWarning --test
 `instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다.
 
 `notion check`는 Notion 토큰과 데이터소스 접근, 필수 속성 타입을 확인합니다. `notion sync`는 최근 콘텐츠 상태를 Notion 데이터소스에 생성/업데이트합니다. `notion backup`은 Supabase Storage의 공개 manifest와 PNG 카드뉴스를 Notion File Upload API로 가져와 Notion-hosted 파일로 붙입니다. Notion은 읽기용 미러이며 실제 상태 관리는 Supabase/SQLite 저장소가 담당합니다. 필요한 Notion 속성은 `docs/notion-mirror.md`에 정리되어 있습니다.
+
+`storage cleanup`은 `published` 상태이고 Notion artifact backup이 `backed_up`으로 끝난 Instagram 산출물만 Supabase Storage에서 정리합니다. 기본 실행은 dry-run이라 삭제 후보와 object path만 보여주며, 실제 삭제는 `--confirm`을 붙였을 때만 수행합니다. 삭제가 성공하면 `channel_outputs.artifact_path`를 비워 중복 삭제를 막고 `content.storage.cleaned` 이벤트를 기록합니다.
 
 `doctor schedule`은 GitHub Actions 정기 파이프라인에 필요한 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID` 설정 여부를 비밀값 노출 없이 확인합니다. Notion은 선택 동기화이므로 `doctor notion`에서 별도로 확인합니다. `doctor discord`는 Discord 버튼 수신 Edge Function에 필요한 `DISCORD_PUBLIC_KEY`와 Supabase 설정을 함께 확인합니다. `doctor publish`는 Instagram 게시에 필요한 Meta/Supabase Storage 설정을 확인하고, `META_APP_ID`와 `META_APP_SECRET`이 있으면 Meta token debugger로 access token 유효성, 만료일, 필수 Instagram 권한, 대상 Instagram business account 접근 가능 여부까지 확인합니다. 만료 임박은 경고로만 표시하고, 만료/권한 누락/계정 접근 실패는 실패로 처리합니다.
 

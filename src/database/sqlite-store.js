@@ -6,6 +6,7 @@ import {
   insertEvent,
   insertContentItem,
   listChannelOutputsReadyForNotionBackup,
+  listChannelOutputsReadyForStorageCleanup,
   listChannelOutputsReadyToRender,
   listChannelOutputsReadyToPublish,
   listContentItemsForNotionSync,
@@ -160,6 +161,13 @@ export function createSqliteStore(db, { databasePath = ':memory:' } = {}) {
      */
     async listChannelOutputsReadyForNotionBackup(options) {
       return listChannelOutputsReadyForNotionBackup(db, options);
+    },
+
+    /**
+     * Lists backed-up public channel artifacts ready for Storage cleanup.
+     */
+    async listChannelOutputsReadyForStorageCleanup(options) {
+      return listChannelOutputsReadyForStorageCleanup(db, options);
     },
 
     /**
