@@ -57,7 +57,7 @@ node --no-warnings=ExperimentalWarning src/cli.js review request --limit 1
 Supabase Edge Function에 필요한 secrets를 설정합니다.
 
 ```powershell
-npx supabase secrets set DISCORD_PUBLIC_KEY=... --project-ref finhgkhvhpzdizzmhldp
+npx supabase secrets set DISCORD_PUBLIC_KEY=... --project-ref <project-ref>
 ```
 
 `discord-review`는 Discord가 직접 호출하는 공개 웹훅이므로 `supabase/config.toml`에서 이 함수의 Supabase JWT 검증을 끕니다. 대신 함수 내부에서 Discord 서명을 검증한 뒤에만 Supabase 상태를 바꿉니다.
@@ -67,7 +67,7 @@ npx supabase secrets set DISCORD_PUBLIC_KEY=... --project-ref finhgkhvhpzdizzmhl
 그 다음 Edge Function을 배포합니다.
 
 ```powershell
-npx supabase functions deploy discord-review --no-verify-jwt --project-ref finhgkhvhpzdizzmhldp --use-api
+npx supabase functions deploy discord-review --no-verify-jwt --project-ref <project-ref> --use-api
 ```
 
 Discord Developer Portal의 Interactions Endpoint URL에는 배포된 Edge Function URL을 등록합니다.

@@ -162,8 +162,8 @@ node --no-warnings=ExperimentalWarning src/cli.js review check
 Edge Function secret 적용 및 배포:
 
 ```powershell
-npx supabase secrets set --env-file .env --project-ref <project-ref> --workdir supabase
-npx supabase functions deploy discord-review --no-verify-jwt --project-ref <project-ref> --workdir supabase
+npx supabase secrets set DISCORD_PUBLIC_KEY=<discord-application-public-key> --project-ref <project-ref>
+npx supabase functions deploy discord-review --no-verify-jwt --project-ref <project-ref> --use-api
 ```
 
 Discord Interactions Endpoint URL:

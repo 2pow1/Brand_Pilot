@@ -25,8 +25,8 @@ The service role key is for server-side jobs only. Do not expose it in browser c
 Deploy the Discord review function after setting the secrets:
 
 ```powershell
-npx supabase secrets set DISCORD_PUBLIC_KEY=<discord-application-public-key> --project-ref finhgkhvhpzdizzmhldp
-npx supabase functions deploy discord-review --no-verify-jwt --project-ref finhgkhvhpzdizzmhldp --use-api
+npx supabase secrets set DISCORD_PUBLIC_KEY=<discord-application-public-key> --project-ref <project-ref>
+npx supabase functions deploy discord-review --no-verify-jwt --project-ref <project-ref> --use-api
 ```
 
 `supabase/config.toml` disables Supabase JWT verification for `discord-review` because Discord calls this endpoint directly. The function still verifies Discord's Ed25519 signature before it changes content state.
