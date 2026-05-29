@@ -43,6 +43,14 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 
 운영 환경의 상태 저장소는 Supabase Postgres를 기준으로 설계합니다. 로컬 CLI 검증은 `DATABASE_PROVIDER=sqlite`로 SQLite fallback을 사용하고, 무료 우선 운영은 GitHub Actions schedule이 `DATABASE_PROVIDER=supabase`로 CLI job을 실행합니다. 자세한 운영 DB 설계는 `docs/supabase-architecture.md`를 참고합니다.
 
+설정 관련 문서:
+
+- `docs/env-setup.md`: 전체 환경 변수, GitHub Actions Secrets/Variables, 운영 계정 전환 체크리스트
+- `docs/meta-instagram-setup.md`: Facebook Page, Instagram Professional 계정, Meta App, long-lived token 발급
+- `docs/discord-review.md`: Discord bot, 검수 채널, Supabase Edge Function, Interactions Endpoint URL
+- `docs/notion-mirror.md`: Notion data source 속성, sync, artifact backup, Storage cleanup
+- `docs/supabase-architecture.md`: Supabase Postgres/Storage/Edge Function 운영 구조
+
 ## 로컬 실행
 
 현재 CLI 구현은 Node.js 24에서 SQLite 또는 Supabase provider로 실행할 수 있습니다.

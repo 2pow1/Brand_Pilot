@@ -2,6 +2,28 @@
 
 이 문서는 운영 계정 전환 시 필요한 환경 변수, 확인 위치, GitHub Actions 적용 기준을 정리합니다. 실제 토큰, API key, secret 값은 문서나 Git에 기록하지 않습니다.
 
+## 전체 설정 순서
+
+새 운영 계정으로 처음 세팅할 때는 아래 순서로 진행합니다.
+
+1. Supabase 프로젝트를 만들고 SQL schema와 Storage bucket을 준비합니다.
+2. OpenAI API key를 발급합니다.
+3. Discord 앱과 bot을 만들고 검수 채널에 초대합니다.
+4. Supabase Edge Function `discord-review`를 배포하고 Discord Interactions Endpoint URL을 연결합니다.
+5. Notion integration과 data source를 만들고 integration을 초대합니다.
+6. Instagram 계정을 Professional 계정으로 전환합니다.
+7. Facebook Page를 만들고 Instagram Professional 계정을 해당 Page에 연결합니다.
+8. Meta Developer App을 만들고 Graph API Explorer에서 Instagram 게시용 token과 IG User ID를 확인합니다.
+9. 로컬 `.env`에 값을 넣고 `doctor *` 명령으로 진단합니다.
+10. GitHub Actions Secrets/Variables에 운영 값을 넣고 `workflow_dispatch`로 수동 실행합니다.
+
+각 서비스별 상세 절차는 아래 문서로 분리되어 있습니다.
+
+- Discord: `docs/discord-review.md`
+- Meta / Facebook / Instagram: `docs/meta-instagram-setup.md`
+- Notion: `docs/notion-mirror.md`
+- Supabase 운영 구조: `docs/supabase-architecture.md`
+
 ## 적용 위치
 
 로컬 실행:
@@ -44,6 +66,7 @@ GitHub repository
 | `DISCORD_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://discord.com/api/v10` |
 | `NOTION_TOKEN` | 선택 | Secret | Notion mirror sync |
 | `NOTION_DATA_SOURCE_ID` | 선택 | Secret | Notion 대상 data source |
+| `NOTION_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://api.notion.com/v1` |
 | `NOTION_VERSION` | 선택 | workflow 고정값 | 기본값 `2026-03-11` |
 | `META_ACCESS_TOKEN` | Instagram 게시 필수 | Secret | Instagram Graph API 게시 |
 | `META_APP_ID` | 진단 권장 | Secret | Meta token debugger |
@@ -51,7 +74,7 @@ GitHub repository
 | `META_TOKEN_EXPIRY_WARNING_DAYS` | 선택 | Variable | 토큰 만료 경고 기준일 |
 | `META_GRAPH_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://graph.facebook.com/v25.0` |
 | `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram 게시 필수 | Secret | 게시 대상 Instagram business account |
-| `INSTAGRAM_PUBLISH_ENABLED` | 불필요 | Variable | `true`일 때만 Actions에서 실제 Instagram 게시 실행 |
+| `INSTAGRAM_PUBLISH_ENABLED` | workflow 전용 | Variable | `true`일 때만 Actions에서 실제 Instagram 게시 실행 |
 
 ## Supabase
 
@@ -223,6 +246,13 @@ node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --limit 10
 
 Meta Developer App이 아직 없거나 token을 처음부터 다시 발급해야 하면 `docs/meta-instagram-setup.md`의 순서를 먼저 따릅니다.
 
+필수 사전 조건:
+
+- Instagram 계정이 Professional 계정이어야 합니다.
+- Facebook Page가 있어야 합니다.
+- Instagram Professional 계정이 해당 Facebook Page와 연결되어 있어야 합니다.
+- Meta Developer App에서 token을 발급하는 Facebook 계정이 해당 Page와 Instagram 계정에 접근할 수 있어야 합니다.
+
 확인 위치:
 
 ```text
@@ -268,10 +298,11 @@ Meta Developers
 
 `META_ACCESS_TOKEN`:
 
-- 운영 테스트에서는 long-lived user access token을 사용합니다.
+- Graph API Explorer에서 받은 단기 user access token을 그대로 운영값으로 쓰지 않습니다.
+- 운영 테스트에서는 단기 token을 long-lived user access token으로 교환한 값을 사용합니다.
 - token debugger에서 만료일과 scope를 확인합니다.
 - 필요한 최소 scope는 `instagram_basic`, `instagram_content_publish`입니다.
-- token 발급과 long-lived token 교환 절차는 `docs/meta-instagram-setup.md`에 정리되어 있습니다.
+- token 발급과 long-lived token 교환 절차는 `docs/meta-instagram-setup.md`의 `6. 단기 토큰을 Long-Lived User Token으로 교환`에 정리되어 있습니다.
 
 `META_APP_ID`, `META_APP_SECRET`은 게시 자체에는 필수가 아니지만 `doctor publish`가 token debugger로 만료일과 scope를 확인할 때 필요합니다.
 
@@ -303,11 +334,22 @@ node --no-warnings=ExperimentalWarning src/cli.js doctor publish
 [ok] INSTAGRAM_BUSINESS_ACCOUNT_ACCESS
 ```
 
-만료 임박은 `[warn]`으로 표시되며 실패로 처리하지 않습니다. 만료, 권한 누락, Instagram account 접근 실패는 실패입니다.
+만료 임박은 `[warn]`으로 표시되며 실패로 처리하지 않습니다. `INSTAGRAM_PAGE_CONNECTION`도 Instagram-login token에서는 `[warn]`일 수 있습니다. 이 경우 `INSTAGRAM_BUSINESS_ACCOUNT_ACCESS`가 `[ok]`이면 게시 접근성 판단은 통과입니다. 만료, 권한 누락, Instagram account 접근 실패는 실패입니다.
 
 ## GitHub Actions 설정
 
-공통 필수 Secrets:
+GitHub Actions 값은 repository의 아래 위치에서 관리합니다.
+
+```text
+GitHub repository
+-> Settings
+-> Secrets and variables
+-> Actions
+```
+
+### 최소 실행 필수 Secrets
+
+`doctor schedule`이 통과하고 수집/초안/Discord 검수 요청까지 실행되기 위한 최소값입니다.
 
 ```text
 SUPABASE_URL
@@ -315,25 +357,36 @@ SUPABASE_SERVICE_ROLE_KEY
 OPENAI_API_KEY
 DISCORD_BOT_TOKEN
 DISCORD_REVIEW_CHANNEL_ID
+```
+
+### Notion 사용 시 추가 Secrets
+
+Notion mirror와 artifact backup을 실행하려면 추가합니다. 둘 중 하나라도 비어 있으면 GitHub Actions는 Notion 단계만 건너뜁니다.
+
+```text
 NOTION_TOKEN
 NOTION_DATA_SOURCE_ID
 ```
 
-Instagram 게시 필수 Secrets:
+### Instagram 실제 게시 필수 Secrets
+
+`INSTAGRAM_PUBLISH_ENABLED=true`일 때 필요합니다.
 
 ```text
 META_ACCESS_TOKEN
 INSTAGRAM_BUSINESS_ACCOUNT_ID
 ```
 
-Instagram 진단 권장 Secrets:
+### Instagram 진단 권장 Secrets
+
+게시 자체에는 필수가 아니지만 token 만료일과 scope를 `doctor publish`에서 확인하려면 설정합니다.
 
 ```text
 META_APP_ID
 META_APP_SECRET
 ```
 
-Variables:
+### Variables
 
 ```text
 OPENAI_MODEL
@@ -342,9 +395,16 @@ META_TOKEN_EXPIRY_WARNING_DAYS
 INSTAGRAM_PUBLISH_ENABLED
 ```
 
-workflow 고정값:
+### Workflow 고정값
+
+아래 값은 `.github/workflows/brand-pilot-schedule.yml`에 고정되어 있습니다. 특별한 이유가 없으면 GitHub Secret이나 Variable로 따로 만들지 않습니다.
 
 ```text
+DATABASE_PROVIDER=supabase
+SUPABASE_SCHEMA=public
+OPENAI_BASE_URL=https://api.openai.com/v1
+DISCORD_BASE_URL=https://discord.com/api/v10
+NOTION_VERSION=2026-03-11
 META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 ```
 
@@ -358,18 +418,28 @@ META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 
 현재 workflow는 카드뉴스 렌더링을 위해 `windows-latest` runner를 사용합니다. 렌더러가 `scripts/render-instagram-card-news.ps1`의 Windows PowerShell 및 `System.Drawing` 기반이기 때문입니다.
 
+현재 schedule은 6시간마다 실행됩니다.
+
+```yaml
+schedule:
+  - cron: '17 */6 * * *'
+```
+
+수동 검증은 GitHub Actions 화면의 `Run workflow`로 실행합니다.
+
 ## 운영 계정 전환 체크리스트
 
 1. 새 Supabase 프로젝트에 `supabase/schema.sql` 적용
-2. 필요한 보강 SQL 적용: `supabase/publish-lock.sql`, `supabase/notion-artifact-backup.sql`
-3. Storage bucket 생성 및 public 접근 확인
-4. 로컬 `.env`를 운영 값으로 교체
-5. `doctor schedule`, `doctor discord`, `doctor notion`, `doctor publish` 실행
-6. Discord Edge Function secrets 재설정 및 재배포
-7. Discord Interactions Endpoint URL이 Supabase function URL인지 확인
-8. GitHub Actions Secrets/Variables를 운영 값으로 교체
-9. GitHub Actions `workflow_dispatch`로 수동 실행
-10. `--limit 1`로 draft/review/channel/render/upload/publish 흐름 검증
+2. Storage bucket 생성 SQL 적용: `supabase/storage.sql`
+3. 필요한 보강 SQL 적용: `supabase/publish-lock.sql`, `supabase/notion-artifact-backup.sql`
+4. Storage bucket public 접근 확인
+5. 로컬 `.env`를 운영 값으로 교체
+6. `doctor schedule`, `doctor discord`, `doctor notion`, `doctor publish` 실행
+7. Discord Edge Function secrets 재설정 및 재배포
+8. Discord Interactions Endpoint URL이 Supabase function URL인지 확인
+9. GitHub Actions Secrets/Variables를 운영 값으로 교체
+10. GitHub Actions `workflow_dispatch`로 수동 실행
+11. `--limit 1`로 draft/review/channel/render/upload/publish 흐름 검증
 
 ## 검증 명령 모음
 

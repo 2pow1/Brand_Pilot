@@ -1,5 +1,7 @@
 # Supabase Setup
 
+전체 운영 계정 전환 순서는 `docs/env-setup.md`를 먼저 봅니다. 이 문서는 Supabase 프로젝트에 적용해야 하는 SQL과 Edge Function 배포 순서만 좁게 정리합니다.
+
 1. Create a Supabase project.
 2. Open the SQL Editor.
 3. Run `supabase/schema.sql`.

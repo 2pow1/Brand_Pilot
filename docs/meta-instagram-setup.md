@@ -48,7 +48,44 @@ META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 
 Meta 공식 Getting Started 문서도 Instagram Business/Creator account, 연결된 Facebook Page, 해당 Page에서 작업을 수행할 수 있는 Developer account, 등록된 Facebook App을 전제로 합니다.
 
-## 1. Meta Developer 앱 생성
+## 1. Facebook Page 생성과 Instagram 연결
+
+Facebook Page가 아직 없으면 먼저 만듭니다.
+
+```text
+Facebook
+-> Pages
+-> Create new Page
+```
+
+필수로 맞출 것:
+
+- Page 이름
+- 카테고리
+- Page를 관리하는 Facebook 계정
+
+Instagram Professional 계정을 Page에 연결하는 경로는 UI 상태에 따라 다를 수 있습니다. 일반적으로 아래 중 하나에서 연결합니다.
+
+```text
+Instagram 앱
+-> 프로필
+-> 프로필 편집
+-> 페이지 / Facebook Page 연결
+```
+
+또는:
+
+```text
+Meta Business Suite
+-> Settings
+-> Accounts
+-> Instagram accounts
+-> Add / Connect
+```
+
+연결 후 Meta나 Facebook 화면에 바로 반영되지 않을 수 있습니다. Graph API Explorer에서 `/me/accounts` 결과가 비어 있으면 Page 권한, 앱 선택, token 권한을 다시 확인합니다.
+
+## 2. Meta Developer 앱 생성
 
 1. Meta Developers에 로그인합니다.
 2. `내 앱`으로 이동합니다.
@@ -70,7 +107,7 @@ Meta 공식 Getting Started 문서도 Instagram Business/Creator account, 연결
 - 값은 문서나 Git에 적지 않습니다.
 - 로컬 `.env`, Supabase/GitHub Secrets에만 넣습니다.
 
-## 2. Facebook Login 제품 추가
+## 3. Facebook Login 제품 추가
 
 1. 생성한 앱의 Dashboard로 이동합니다.
 2. 제품 추가 또는 Use cases 설정에서 `Facebook Login`을 추가합니다.
@@ -79,7 +116,7 @@ Meta 공식 Getting Started 문서도 Instagram Business/Creator account, 연결
 
 공식 Getting Started 문서는 Instagram API with Facebook Login을 쓰기 위해 앱에 Facebook Login product를 추가하라고 안내합니다.
 
-## 3. Graph API Explorer에서 단기 User Token 발급
+## 4. Graph API Explorer에서 단기 User Token 발급
 
 1. Graph API Explorer를 엽니다.
    - https://developers.facebook.com/tools/explorer/
@@ -104,7 +141,7 @@ pages_read_engagement
 - 다른 앱으로 토큰을 발급하면 `META_APP_ID`, `META_APP_SECRET`으로 debug할 때 맞지 않을 수 있습니다.
 - Facebook 계정이 연결된 Page 권한을 갖고 있지 않으면 `/me/accounts`가 비거나 Instagram account가 나오지 않습니다.
 
-## 4. Facebook Page와 Instagram Business Account ID 확인
+## 5. Facebook Page와 Instagram Business Account ID 확인
 
 Graph API Explorer에서 아래 요청을 실행합니다.
 
@@ -137,7 +174,7 @@ Facebook Page ID: data[].id
 INSTAGRAM_BUSINESS_ACCOUNT_ID: data[].instagram_business_account.id
 ```
 
-`INSTAGRAM_BUSINESS_ACCOUNT_ID`에 Facebook Page ID를 넣으면 안 됩니다.
+`INSTAGRAM_BUSINESS_ACCOUNT_ID`에 Facebook Page ID를 넣으면 안 됩니다. `1784...` 형태의 Instagram Business/Creator IG User ID가 들어가야 합니다.
 
 만약 `instagram_business_account`가 보이지 않으면 Page ID를 확인한 뒤 아래 요청도 실행합니다.
 
@@ -153,18 +190,30 @@ GET /{page-id}?fields=instagram_business_account{id,username}
 - Graph API Explorer에서 올바른 앱을 선택했는지
 - 토큰에 `instagram_basic`, `pages_show_list` 권한이 포함되어 있는지
 
-## 5. 단기 토큰을 Long-Lived User Token으로 교환
+## 6. 단기 토큰을 Long-Lived User Token으로 교환
 
 Graph API Explorer에서 받은 단기 token은 오래가지 않습니다. 운영 테스트에는 long-lived user access token을 사용합니다. Meta 공식 문서 기준 long-lived user token은 보통 약 60일 동안 유효합니다.
 
-브라우저 또는 터미널에서 아래 요청을 실행합니다. 실제 값은 노출하지 않습니다.
+PowerShell에서는 URL 인코딩을 포함해 아래처럼 실행합니다. 실제 값은 노출하지 않습니다.
 
-```text
-GET https://graph.facebook.com/v25.0/oauth/access_token
-  ?grant_type=fb_exchange_token
-  &client_id={META_APP_ID}
-  &client_secret={META_APP_SECRET}
-  &fb_exchange_token={short-lived-user-access-token}
+```powershell
+$APP_ID = "<meta-app-id>"
+$APP_SECRET = "<meta-app-secret>"
+$SHORT_TOKEN = "<short-lived-user-access-token>"
+
+$query = @{
+  grant_type = "fb_exchange_token"
+  client_id = $APP_ID
+  client_secret = $APP_SECRET
+  fb_exchange_token = $SHORT_TOKEN
+}
+
+$encoded = ($query.GetEnumerator() | ForEach-Object {
+  "$([uri]::EscapeDataString($_.Key))=$([uri]::EscapeDataString($_.Value))"
+}) -join "&"
+
+$url = "https://graph.facebook.com/v25.0/oauth/access_token?$encoded"
+Invoke-RestMethod -Method Get -Uri $url
 ```
 
 응답 예:
@@ -184,8 +233,9 @@ GET https://graph.facebook.com/v25.0/oauth/access_token
 - 만료된 단기 token은 long-lived token으로 교환할 수 없습니다.
 - `client_secret`이 들어가는 요청은 서버 또는 개발자 로컬 환경에서만 실행합니다.
 - long-lived token도 만료되므로 `doctor publish`로 만료일을 주기적으로 확인합니다.
+- `OAuthException`, `code: 2`, `is_transient: true`가 나오면 Meta의 일시 오류일 수 있습니다. 같은 값으로 잠시 뒤 재시도하고, 반복되면 Graph API Explorer에서 단기 token을 새로 발급한 뒤 바로 교환합니다.
 
-## 6. 로컬 `.env` 적용
+## 7. 로컬 `.env` 적용
 
 게시 필수값:
 
@@ -234,7 +284,9 @@ Status: ok
 
 `INSTAGRAM_BUSINESS_ACCOUNT_ACCESS`에서 실패하면 `INSTAGRAM_BUSINESS_ACCOUNT_ID`가 틀렸거나, token을 발급한 Facebook 계정이 해당 Instagram account에 접근할 수 없는 상태입니다.
 
-## 7. 게시 테스트
+`INSTAGRAM_PAGE_CONNECTION`이 warning이어도 `INSTAGRAM_BUSINESS_ACCOUNT_ACCESS`가 ok이면 직접 Instagram account 접근은 가능한 상태입니다. Instagram-login token에서는 `/me/accounts`가 Page를 반환하지 않는 경우가 있어 이 항목은 보조 진단으로 봅니다.
+
+## 8. 게시 테스트
 
 먼저 현재 pipeline 상태를 봅니다.
 
@@ -259,7 +311,7 @@ node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 1
 
 게시 후 Instagram 앱/웹에서 실제 게시물을 확인합니다. 테스트 게시물이라면 확인 후 삭제해도 됩니다.
 
-## 8. GitHub Actions에 운영 값 적용
+## 9. GitHub Actions에 운영 값 적용
 
 GitHub repository:
 
@@ -300,7 +352,7 @@ INSTAGRAM_PUBLISH_ENABLED=false
 INSTAGRAM_PUBLISH_ENABLED=true
 ```
 
-## 9. Development Mode와 App Review 기준
+## 10. Development Mode와 App Review 기준
 
 현재 MVP처럼 클라이언트 운영 계정 하나를 개발자가 관리하고, token을 발급한 Facebook 계정이 앱 role과 Page 권한을 갖고 있다면 Development Mode에서도 테스트가 가능합니다.
 
