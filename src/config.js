@@ -11,6 +11,9 @@ const DEFAULT_DISCORD_BASE_URL = 'https://discord.com/api/v10';
 const DEFAULT_META_GRAPH_BASE_URL = 'https://graph.facebook.com/v25.0';
 const DEFAULT_NOTION_BASE_URL = 'https://api.notion.com/v1';
 const DEFAULT_NOTION_VERSION = '2026-03-11';
+const DEFAULT_BRAND_COMPANY_NAME = 'GrowthLine';
+const DEFAULT_BRAND_VOICE = 'clear, practical, founder-friendly';
+const DEFAULT_BRAND_SERVICE_SUMMARY = 'Branding and marketing support for small businesses.';
 
 /**
  * Parses simple KEY=value lines from a local .env file.
@@ -101,10 +104,28 @@ export function loadJsonConfig(path) {
 /**
  * Loads the real brand config when present, otherwise falls back to the example config.
  */
-export function loadBrandConfig(cwd = process.cwd()) {
+export function loadBrandConfig(cwd = process.cwd(), env = process.env) {
   const brandPath = resolve(cwd, 'config/brand.json');
   const examplePath = resolve(cwd, 'config/brand.example.json');
-  return loadJsonConfig(existsSync(brandPath) ? brandPath : examplePath);
+  const brand = loadJsonConfig(existsSync(brandPath) ? brandPath : examplePath);
+  const dotEnv = loadDotEnv(cwd);
+  const merged = { ...dotEnv, ...env };
+  const ctaEnabled = String(merged.BRAND_CTA_ENABLED || brand.cta?.enabled || '').toLowerCase();
+  const ctaUrl = merged.BRAND_CTA_URL ?? brand.cta?.url ?? '';
+  const ctaLabel = merged.BRAND_CTA_LABEL ?? brand.cta?.label ?? '';
+
+  return {
+    ...brand,
+    companyName: merged.BRAND_COMPANY_NAME || brand.companyName || DEFAULT_BRAND_COMPANY_NAME,
+    brandVoice: merged.BRAND_VOICE || brand.brandVoice || DEFAULT_BRAND_VOICE,
+    serviceSummary: merged.BRAND_SERVICE_SUMMARY || brand.serviceSummary || DEFAULT_BRAND_SERVICE_SUMMARY,
+    cta: {
+      ...(brand.cta || {}),
+      enabled: ctaEnabled === 'true' || (ctaEnabled !== 'false' && Boolean(ctaUrl)),
+      label: ctaLabel,
+      url: ctaUrl
+    }
+  };
 }
 
 /**

@@ -19,49 +19,79 @@ function truncate(value, maxLength) {
  */
 function splitDraftBody(body) {
   return normalizeWhitespace(body)
-    .split(/(?<=[.!?。！？]|다\.|요\.)\s+/)
+    .split(/(?<=[.!?。！？])\s+/)
     .map((sentence) => sentence.trim())
     .filter(Boolean);
 }
 
 /**
- * Chooses the problem, insight, solution, and CTA copy blocks for the five-slide carousel.
+ * Returns true only when a real CTA URL is configured for the operating brand.
  */
-function pickBodyLines(item) {
+function hasVisibleCta(brand) {
+  return Boolean(brand.cta?.enabled && normalizeWhitespace(brand.cta?.url));
+}
+
+/**
+ * Chooses the problem, insight, solution, and closing copy blocks for the five-slide carousel.
+ */
+function pickBodyLines(item, companyName) {
   const sentences = splitDraftBody(item.draft_body);
 
   return {
     problem: truncate(sentences[0] || item.draft_body, 72),
     insight: truncate(sentences[1] || item.source_title, 82),
     solution: truncate(sentences[2] || item.draft_body, 92),
-    cta: truncate(sentences[3] || '지금 우리 브랜드의 홍보 구조를 점검해보세요.', 86)
+    closing: truncate(
+      sentences[3] ||
+        `${companyName}은 작은 사업의 브랜딩과 홍보 메시지를 고객이 이해하는 구조로 정리합니다.`,
+      86
+    )
   };
 }
 
 /**
- * Builds the Instagram caption from the draft, derived slide copy, and brand CTA settings.
+ * Builds the Instagram caption from the draft and optional brand CTA settings.
  */
 function buildCaption({ brand, item, lines }) {
-  const ctaLabel = brand.cta?.label || '상담 채널 확인하기';
-  const ctaUrl = brand.cta?.url || '';
-
-  return [
+  const parts = [
     `${item.draft_title || item.source_title}`,
     '',
     lines.problem,
-    lines.solution,
-    '',
-    `${ctaLabel}${ctaUrl ? `: ${ctaUrl}` : ''}`
-  ].join('\n');
+    lines.solution
+  ];
+
+  if (hasVisibleCta(brand)) {
+    const ctaLabel = brand.cta?.label || '상담 채널 확인하기';
+    parts.push('', `${ctaLabel}: ${brand.cta.url}`);
+  }
+
+  return parts.join('\n');
 }
 
 /**
  * Converts an approved content item into the Instagram card-news payload stored in channel_outputs.
  */
 export function createInstagramCardNewsPayload({ brand, item, channel }) {
-  const lines = pickBodyLines(item);
-  const companyName = brand.companyName || 'Brand Pilot';
+  const companyName = brand.companyName || 'GrowthLine';
+  const lines = pickBodyLines(item, companyName);
+  const visibleCta = hasVisibleCta(brand);
   const ctaLabel = brand.cta?.label || '상담 채널 확인하기';
+
+  const finalSlide = visibleCta
+    ? {
+        index: 5,
+        role: 'cta',
+        headline: ctaLabel,
+        body: lines.closing,
+        qrTargetUrl: brand.cta.url
+      }
+    : {
+        index: 5,
+        role: 'closing',
+        label: companyName,
+        headline: '홍보는 더 자주가 아니라 더 선명하게',
+        body: lines.closing
+      };
 
   return {
     channelId: 'instagram',
@@ -85,37 +115,31 @@ export function createInstagramCardNewsPayload({ brand, item, channel }) {
         index: 1,
         role: 'hook',
         headline: truncate(item.draft_title || item.source_title, 42),
-        body: '대표님이 먼저 줄여야 할 홍보 고민',
+        body: '대표님이 먼저 줄여야 할 것은 더 많은 홍보가 아닙니다.',
         emphasis: '홍보 구조'
       },
       {
         index: 2,
         role: 'problem',
         label: '문제',
-        headline: '막막함은 능력 문제가 아닙니다',
+        headline: '노력이 부족한 게 아니라 구조가 흐릿한 겁니다',
         body: lines.problem
       },
       {
         index: 3,
         role: 'insight',
         label: '인사이트',
-        headline: '먼저 공통 메시지를 정리합니다',
+        headline: '고객은 설명보다 느낌으로 먼저 판단합니다',
         body: lines.insight
       },
       {
         index: 4,
         role: 'solution',
         label: companyName,
-        headline: '채널보다 먼저 구조를 만듭니다',
+        headline: '채널보다 먼저 메시지 구조를 만듭니다',
         body: lines.solution
       },
-      {
-        index: 5,
-        role: 'cta',
-        headline: ctaLabel,
-        body: lines.cta,
-        qrTargetUrl: brand.cta?.url || ''
-      }
+      finalSlide
     ],
     caption: buildCaption({ brand, item, lines }),
     hashtags: ['#브랜딩', '#마케팅', '#사업홍보', '#인스타그램마케팅', '#대표님콘텐츠'],

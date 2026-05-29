@@ -23,6 +23,7 @@ Usage:
   node src/cli.js review approve <content-id>
   node src/cli.js review reject <content-id> [reason]
   node src/cli.js channel generate [--limit <n>]
+  node src/cli.js channel regenerate <content-id>
   node src/cli.js instagram render [--limit <n>]
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
@@ -440,6 +441,58 @@ async function runChannelGenerate(argv) {
 }
 
 /**
+ * Rebuilds channel-specific payloads for one in-flight content item.
+ */
+async function runChannelRegenerate(argv) {
+  const contentId = argv[0];
+  if (!contentId) {
+    throw new Error('channel regenerate requires <content-id>');
+  }
+  if (argv.length > 1) {
+    throw new Error(`Unknown option: ${argv[1]}`);
+  }
+
+  const config = loadConfig();
+  const brand = loadBrandConfig(config.cwd);
+  const channels = loadJsonConfig(resolve(config.cwd, 'config/channels.json'));
+  const { generateChannelOutputs } = await import('./channel/index.js');
+  const { regenerateChannelOutputsForContent } = await import('./repository.js');
+  const { store } = await openAppDatabase();
+  const item = await store.getContentItem(contentId);
+
+  if (!item) {
+    throw new Error(`Content item not found: ${contentId}`);
+  }
+
+  const outputs = generateChannelOutputs({
+    brand,
+    item,
+    channels
+  });
+  const saved = await regenerateChannelOutputsForContent(store, item, outputs, {
+    mode: 'template-regenerate',
+    channelIds: outputs.map((output) => output.channelId)
+  });
+
+  printDatabaseInfo(store);
+  console.log(JSON.stringify({
+    regeneratedCount: saved.outputs.length,
+    regenerated: {
+      id: saved.item.id,
+      sourceTitle: saved.item.source_title,
+      previousStatus: item.status,
+      status: saved.item.status,
+      channels: saved.outputs.map((output) => ({
+        channelId: output.channel_id,
+        status: output.status
+      }))
+    },
+    summary: await store.summarize()
+  }, null, 2));
+  await store.close();
+}
+
+/**
  * Dispatches channel subcommands.
  */
 async function runChannel(argv) {
@@ -447,8 +500,10 @@ async function runChannel(argv) {
 
   if (action === 'generate') {
     await runChannelGenerate(argv.slice(1));
+  } else if (action === 'regenerate') {
+    await runChannelRegenerate(argv.slice(1));
   } else {
-    throw new Error('channel command must be: generate');
+    throw new Error('channel command must be one of: generate, regenerate');
   }
 }
 

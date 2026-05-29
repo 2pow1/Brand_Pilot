@@ -75,6 +75,12 @@ GitHub repository
 | `META_GRAPH_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://graph.facebook.com/v25.0` |
 | `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram 게시 필수 | Secret | 게시 대상 Instagram business account |
 | `INSTAGRAM_PUBLISH_ENABLED` | workflow 전용 | Variable | `true`일 때만 Actions에서 실제 Instagram 게시 실행 |
+| `BRAND_COMPANY_NAME` | 선택 | Variable | 게시물에 노출할 회사명, 기본값 `GrowthLine` |
+| `BRAND_VOICE` | 선택 | Variable | 초안 생성용 브랜드 말투 |
+| `BRAND_SERVICE_SUMMARY` | 선택 | Variable | 초안 생성용 서비스 설명 |
+| `BRAND_CTA_ENABLED` | 선택 | Variable | `true`일 때만 CTA/QR 사용 |
+| `BRAND_CTA_LABEL` | 선택 | Variable | CTA 문구 |
+| `BRAND_CTA_URL` | 선택 | Variable | CTA/QR target URL |
 
 ## Supabase
 
@@ -109,6 +115,29 @@ SUPABASE_STORAGE_BUCKET=brand-pilot-instagram
 ```powershell
 node --no-warnings=ExperimentalWarning src/cli.js status
 ```
+
+## Brand Identity
+
+브랜드 기본값은 `config/brand.example.json`에 있고, 운영 환경에서는 env 또는 GitHub Actions Variables로 덮어쓸 수 있습니다.
+
+현재 기본 회사명은 `GrowthLine`입니다.
+
+로컬 `.env` 값:
+
+```env
+BRAND_COMPANY_NAME=GrowthLine
+BRAND_VOICE=clear, practical, founder-friendly
+BRAND_SERVICE_SUMMARY=Branding and marketing support for small businesses.
+BRAND_CTA_ENABLED=false
+BRAND_CTA_LABEL=
+BRAND_CTA_URL=
+```
+
+운영 기준:
+
+- `BRAND_COMPANY_NAME`은 초안 프롬프트, 카드뉴스 상단 브랜드명, 최종 슬라이드에 사용됩니다.
+- `BRAND_CTA_ENABLED=false`이거나 `BRAND_CTA_URL`이 비어 있으면 오픈채팅 링크, 샘플 URL, QR placeholder를 노출하지 않습니다.
+- 나중에 오픈채팅방이 준비되면 `BRAND_CTA_ENABLED=true`, `BRAND_CTA_LABEL`, `BRAND_CTA_URL`을 설정합니다.
 
 ## OpenAI
 
@@ -393,6 +422,12 @@ OPENAI_MODEL
 SUPABASE_STORAGE_BUCKET
 META_TOKEN_EXPIRY_WARNING_DAYS
 INSTAGRAM_PUBLISH_ENABLED
+BRAND_COMPANY_NAME
+BRAND_VOICE
+BRAND_SERVICE_SUMMARY
+BRAND_CTA_ENABLED
+BRAND_CTA_LABEL
+BRAND_CTA_URL
 ```
 
 ### Workflow 고정값

@@ -171,6 +171,54 @@ export async function saveChannelOutputsForContent(store, item, outputs, payload
 }
 
 /**
+ * Rebuilds channel payloads for an already approved or in-flight item and clears stale artifacts.
+ */
+export async function regenerateChannelOutputsForContent(store, item, outputs, payload = {}) {
+  const allowedStatuses = new Set([
+    CONTENT_STATUSES.APPROVED,
+    CONTENT_STATUSES.CHANNEL_GENERATED,
+    CONTENT_STATUSES.PUBLISH_PENDING
+  ]);
+
+  if (!allowedStatuses.has(item.status)) {
+    throw new Error(`Cannot regenerate channel outputs from status: ${item.status}`);
+  }
+
+  return store.withTransaction(async () => {
+    const savedOutputs = [];
+
+    for (const output of outputs) {
+      savedOutputs.push(await store.upsertChannelOutput({
+        contentItemId: item.id,
+        channelId: output.channelId,
+        payload: output.payload,
+        eventType: 'content.channel.regenerated',
+        eventPayload: {
+          ...payload,
+          channelId: output.channelId,
+          template: output.payload.template
+        }
+      }));
+    }
+
+    const updated = await store.updateContentStatus({
+      id: item.id,
+      status: CONTENT_STATUSES.CHANNEL_GENERATED,
+      eventType: `content.transition.${item.status}.${CONTENT_STATUSES.CHANNEL_GENERATED}`,
+      payload: {
+        ...payload,
+        channelIds: outputs.map((output) => output.channelId)
+      }
+    });
+
+    return {
+      item: updated,
+      outputs: savedOutputs
+    };
+  });
+}
+
+/**
  * Records local render artifacts and advances the item to publish_pending.
  */
 export async function markChannelOutputRendered(store, item, channelOutput, artifactPath, payload = {}) {

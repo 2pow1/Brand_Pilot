@@ -1,9 +1,10 @@
 {
-  "companyName": "Client Company",
+  "companyName": "GrowthLine",
   "brandVoice": "clear, practical, founder-friendly",
   "serviceSummary": "Branding and marketing support for small businesses.",
   "cta": {
-    "label": "Join the open chat",
-    "url": "https://example.com/open-chat"
+    "enabled": false,
+    "label": "",
+    "url": ""
   }
 }

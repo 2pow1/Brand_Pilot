@@ -399,6 +399,13 @@ export function upsertChannelOutput(
       payload_json = excluded.payload_json,
       artifact_path = excluded.artifact_path,
       published_url = excluded.published_url,
+      backup_status = '',
+      backup_completed_at = NULL,
+      backup_payload_json = '{}',
+      backup_error = '',
+      attempt_count = 0,
+      next_retry_at = NULL,
+      locked_until = NULL,
       updated_at = excluded.updated_at,
       last_error = ''
   `).run(id, contentItemId, channelId, status, payloadJson, artifactPath, publishedUrl, now, now);

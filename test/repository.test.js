@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { openDatabase, migrate } from '../src/db.js';
 import { createSqliteStore } from '../src/database/sqlite-store.js';
-import { createCollectedContentIfNew, markContentNotionSynced } from '../src/repository.js';
+import { createCollectedContentIfNew, markContentNotionSynced, regenerateChannelOutputsForContent } from '../src/repository.js';
 import { markChannelOutputNotionBackedUp, markChannelOutputStorageCleaned } from '../src/repository.js';
 
 test('does not insert duplicate collected candidates', async () => {
@@ -135,6 +135,61 @@ test('lists and marks channel artifacts backed up to Notion files', async () => 
       .count,
     1
   );
+
+  await store.close();
+});
+
+test('regenerates stale publish-pending channel output and clears publish artifacts', async () => {
+  const db = openDatabase(':memory:');
+  migrate(db);
+  const store = createSqliteStore(db);
+  const item = await store.insertContentItem({
+    sourceId: 'source-a',
+    sourceName: 'Source A',
+    sourceUrl: 'https://example.com/article/regenerate',
+    sourceTitle: 'A regenerate article about branding',
+    sourceFingerprint: 'source-a:regenerate',
+    rawExcerpt: 'Short summary',
+    status: 'publish_pending'
+  });
+  const output = await store.upsertChannelOutput({
+    contentItemId: item.id,
+    channelId: 'instagram',
+    status: 'publish_pending',
+    payload: {
+      brandName: 'Old Brand'
+    },
+    artifactPath: 'https://storage.example.com/old/manifest.json',
+    eventType: 'content.channel.generated'
+  });
+  await store.updateChannelOutputFailure({
+    id: output.id,
+    attemptCount: 0,
+    lastError: 'old failure',
+    nextRetryAt: new Date(Date.now() + 60_000).toISOString()
+  });
+
+  const regenerated = await regenerateChannelOutputsForContent(
+    store,
+    item,
+    [
+      {
+        channelId: 'instagram',
+        payload: {
+          brandName: 'GrowthLine'
+        }
+      }
+    ],
+    { mode: 'test' }
+  );
+
+  assert.equal(regenerated.item.status, 'channel_generated');
+  assert.equal(regenerated.outputs[0].status, 'generated');
+  assert.equal(JSON.parse(regenerated.outputs[0].payload_json).brandName, 'GrowthLine');
+  assert.equal(regenerated.outputs[0].artifact_path, '');
+  assert.equal(regenerated.outputs[0].attempt_count, 0);
+  assert.equal(regenerated.outputs[0].next_retry_at, null);
+  assert.equal(regenerated.outputs[0].locked_until, null);
 
   await store.close();
 });

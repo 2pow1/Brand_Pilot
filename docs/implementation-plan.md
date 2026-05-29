@@ -28,7 +28,8 @@
    - Blog, Facebook, LinkedIn 등 다른 채널로 확장 가능한 구조 유지
 7. Instagram 산출물 생성
    - 1080x1080 카드뉴스 이미지 5장 렌더링
-   - caption, hashtags, CTA, QR target URL 확인
+   - caption, hashtags, 브랜드명 확인
+   - CTA URL이 설정된 경우에만 CTA, QR target URL 포함
 8. Instagram 게시
    - Supabase Storage public URL 업로드
    - Meta / Instagram Graph API 게시

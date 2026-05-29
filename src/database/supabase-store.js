@@ -469,6 +469,13 @@ export function createSupabaseStore(config) {
             payload_json: payload,
             artifact_path: artifactPath,
             published_url: publishedUrl,
+            backup_status: '',
+            backup_completed_at: null,
+            backup_payload_json: {},
+            backup_error: '',
+            attempt_count: 0,
+            next_retry_at: null,
+            locked_until: null,
             updated_at: timestamp,
             last_error: ''
           }

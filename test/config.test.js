@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
-import { loadConfig } from '../src/config.js';
+import { loadBrandConfig, loadConfig } from '../src/config.js';
 
 const EMPTY_ENV_CWD = resolve(process.cwd(), 'tmp/no-env-config-test');
 
@@ -65,4 +65,22 @@ test('loads Meta publish preflight settings', () => {
   assert.equal(config.metaAppSecret, 'meta-app-secret');
   assert.equal(config.metaTokenExpiryWarningDays, 10);
   assert.equal(config.instagramBusinessAccountId, 'ig-business-id');
+});
+
+test('loads brand identity overrides from environment', () => {
+  const brand = loadBrandConfig(process.cwd(), {
+    BRAND_COMPANY_NAME: 'GrowthLine',
+    BRAND_VOICE: 'practical',
+    BRAND_SERVICE_SUMMARY: 'Branding support',
+    BRAND_CTA_ENABLED: 'false',
+    BRAND_CTA_LABEL: 'Join',
+    BRAND_CTA_URL: 'https://example.com/open-chat'
+  });
+
+  assert.equal(brand.companyName, 'GrowthLine');
+  assert.equal(brand.brandVoice, 'practical');
+  assert.equal(brand.serviceSummary, 'Branding support');
+  assert.equal(brand.cta.enabled, false);
+  assert.equal(brand.cta.label, 'Join');
+  assert.equal(brand.cta.url, 'https://example.com/open-chat');
 });
