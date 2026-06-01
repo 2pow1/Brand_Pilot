@@ -77,6 +77,7 @@ node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --limit 10
 node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --confirm --limit 10
+node --no-warnings=ExperimentalWarning src/cli.js alert meta-token-expiry
 node --no-warnings=ExperimentalWarning src/cli.js doctor schedule
 node --no-warnings=ExperimentalWarning src/cli.js doctor discord
 node --no-warnings=ExperimentalWarning src/cli.js doctor publish

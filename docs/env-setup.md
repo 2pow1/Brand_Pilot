@@ -350,6 +350,7 @@ GET /me/accounts?fields=id,name,instagram_business_account{id,username}
 
 ```powershell
 node --no-warnings=ExperimentalWarning src/cli.js doctor publish
+node --no-warnings=ExperimentalWarning src/cli.js alert meta-token-expiry
 ```
 
 정상 예:
@@ -500,6 +501,7 @@ node --no-warnings=ExperimentalWarning src/cli.js doctor schedule
 node --no-warnings=ExperimentalWarning src/cli.js doctor discord
 node --no-warnings=ExperimentalWarning src/cli.js doctor notion
 node --no-warnings=ExperimentalWarning src/cli.js doctor publish
+node --no-warnings=ExperimentalWarning src/cli.js alert meta-token-expiry
 node --no-warnings=ExperimentalWarning src/cli.js status
 node --no-warnings=ExperimentalWarning src/cli.js review check
 node --no-warnings=ExperimentalWarning src/cli.js notion check

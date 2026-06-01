@@ -1,0 +1,37 @@
+name: Brand Pilot Token Alert
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '31 0 * * *'
+
+jobs:
+  token-alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SUPABASE_STORAGE_BUCKET: ${{ vars.SUPABASE_STORAGE_BUCKET || 'brand-pilot-instagram' }}
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+      META_TOKEN_EXPIRY_WARNING_DAYS: ${{ vars.META_TOKEN_EXPIRY_WARNING_DAYS || '7' }}
+      META_GRAPH_BASE_URL: https://graph.facebook.com/v25.0
+      INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_REVIEW_CHANNEL_ID: ${{ secrets.DISCORD_REVIEW_CHANNEL_ID }}
+      DISCORD_BASE_URL: https://discord.com/api/v10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Send Meta token expiry alert
+        run: node --no-warnings=ExperimentalWarning src/cli.js alert meta-token-expiry

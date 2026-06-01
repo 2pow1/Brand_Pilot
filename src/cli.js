@@ -31,6 +31,7 @@ Usage:
   node src/cli.js notion sync [--limit <n>]
   node src/cli.js notion backup [--limit <n>]
   node src/cli.js storage cleanup [--dry-run] [--confirm] [--limit <n>]
+  node src/cli.js alert meta-token-expiry
   node src/cli.js doctor [schedule|discord|publish|notion]
   node src/cli.js transitions
 `);
@@ -1042,6 +1043,7 @@ async function main() {
   else if (command === 'instagram') await runInstagram(args);
   else if (command === 'notion') await runNotion(args);
   else if (command === 'storage') await runStorage(args);
+  else if (command === 'alert') await runAlert(args);
   else if (command === 'doctor') await runDoctor(args);
   else if (command === 'transitions') runTransitions();
   else {
