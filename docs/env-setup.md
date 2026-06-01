@@ -487,7 +487,7 @@ schedule:
 3. 필요한 보강 SQL 적용: `supabase/publish-lock.sql`, `supabase/notion-artifact-backup.sql`
 4. Storage bucket public 접근 확인
 5. 로컬 `.env`를 운영 값으로 교체
-6. `doctor schedule`, `doctor discord`, `doctor notion`, `doctor publish` 실행
+6. `doctor schedule`, `doctor discord`, `doctor notion`, `doctor publish`, `alert meta-token-expiry` 실행
 7. Discord Edge Function secrets 재설정 및 재배포
 8. Discord Interactions Endpoint URL이 Supabase function URL인지 확인
 9. GitHub Actions Secrets/Variables를 운영 값으로 교체
