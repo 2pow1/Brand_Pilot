@@ -1,12 +1,12 @@
-name: Brand Pilot Collection Pipeline
+name: Brand Pilot Publish Pipeline
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '11 * * * *'
 
 jobs:
-  pipeline:
+  publish:
     runs-on: windows-latest
     timeout-minutes: 20
     permissions:
@@ -21,9 +21,6 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
       OPENAI_BASE_URL: https://api.openai.com/v1
-      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-      DISCORD_REVIEW_CHANNEL_ID: ${{ secrets.DISCORD_REVIEW_CHANNEL_ID }}
-      DISCORD_BASE_URL: https://discord.com/api/v10
       NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || secrets.NOTION_DATABASE_ID }}
       NOTION_VERSION: 2026-03-11
@@ -50,21 +47,34 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Verify scheduled pipeline configuration
-        run: node --no-warnings=ExperimentalWarning src/cli.js doctor schedule
-
       - name: Show status
         run: node --no-warnings=ExperimentalWarning src/cli.js status
 
-      - name: Collect source candidates
-        run: node --no-warnings=ExperimentalWarning src/cli.js collect --limit 3
+      - name: Generate approved channel payloads
+        run: node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 3
 
-      - name: Create drafts
-        run: node --no-warnings=ExperimentalWarning src/cli.js draft --limit 3
+      - name: Render Instagram card news
+        run: node --no-warnings=ExperimentalWarning src/cli.js instagram render --limit 3
 
-      - name: Request Discord reviews
-        run: node --no-warnings=ExperimentalWarning src/cli.js review request --limit 3
+      - name: Upload Instagram artifacts
+        run: node --no-warnings=ExperimentalWarning src/cli.js instagram upload --limit 3
+
+      - name: Verify Instagram publish configuration
+        if: ${{ env.INSTAGRAM_PUBLISH_ENABLED == 'true' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js doctor publish
+
+      - name: Publish Instagram posts
+        if: ${{ env.INSTAGRAM_PUBLISH_ENABLED == 'true' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js instagram publish --limit 3
 
       - name: Sync Notion mirror
         if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
         run: node --no-warnings=ExperimentalWarning src/cli.js notion sync --limit 10
+
+      - name: Backup Notion artifact files
+        if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js notion backup --limit 10
+
+      - name: Cleanup backed-up Instagram artifacts
+        if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATA_SOURCE_ID != '' }}
+        run: node --no-warnings=ExperimentalWarning src/cli.js storage cleanup --confirm --limit 10

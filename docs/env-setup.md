@@ -433,7 +433,7 @@ BRAND_CTA_URL
 
 ### Workflow 고정값
 
-아래 값은 `.github/workflows/brand-pilot-schedule.yml`에 고정되어 있습니다. 특별한 이유가 없으면 GitHub Secret이나 Variable로 따로 만들지 않습니다.
+아래 값은 `.github/workflows/brand-pilot-schedule.yml`, `.github/workflows/brand-pilot-publish.yml`, `.github/workflows/brand-pilot-token-alert.yml`에 고정되어 있습니다. 특별한 이유가 없으면 GitHub Secret이나 Variable로 따로 만들지 않습니다.
 
 ```text
 DATABASE_PROVIDER=supabase
@@ -446,19 +446,35 @@ META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 
 운영 기준:
 
+- collection workflow는 6시간마다 수집, 초안 생성, Discord 검수 요청, Notion sync를 실행합니다.
+- publish workflow는 1시간마다 승인된 콘텐츠의 채널 payload 생성, 카드뉴스 렌더링, Storage 업로드, Notion sync/backup, 백업 완료된 published 산출물의 Storage cleanup을 실행합니다.
 - `INSTAGRAM_PUBLISH_ENABLED` 기본값은 `false`입니다.
-- `false`이면 수집, 초안 생성, Discord 검수 요청, 채널 payload 생성, 카드뉴스 렌더링, Storage 업로드, Notion sync까지만 실행합니다.
-- `true`이면 `doctor publish`를 먼저 실행한 뒤 `instagram publish --limit 3`으로 실제 Instagram 게시를 시도합니다.
+- `false`이면 publish workflow가 실제 Instagram 게시만 건너뛰고 render/upload/Notion backup/cleanup은 계속 처리합니다.
+- `true`이면 publish workflow가 `doctor publish`를 먼저 실행한 뒤 `instagram publish --limit 3`으로 실제 Instagram 게시를 시도합니다.
 - Meta 계정 인증이나 access token이 불안정한 동안에는 `false`를 유지합니다.
 - Notion과 Meta 값은 해당 기능을 사용할 때만 필요합니다.
 
 현재 workflow는 카드뉴스 렌더링을 위해 `windows-latest` runner를 사용합니다. 렌더러가 `scripts/render-instagram-card-news.ps1`의 Windows PowerShell 및 `System.Drawing` 기반이기 때문입니다.
 
-현재 schedule은 6시간마다 실행됩니다.
+현재 collection workflow는 6시간마다 실행됩니다.
 
 ```yaml
 schedule:
   - cron: '17 */6 * * *'
+```
+
+현재 publish workflow는 1시간마다 실행됩니다.
+
+```yaml
+schedule:
+  - cron: '11 * * * *'
+```
+
+현재 token alert workflow는 매일 실행됩니다.
+
+```yaml
+schedule:
+  - cron: '31 0 * * *'
 ```
 
 수동 검증은 GitHub Actions 화면의 `Run workflow`로 실행합니다.

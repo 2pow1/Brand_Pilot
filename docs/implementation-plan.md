@@ -85,7 +85,9 @@ collected
 
 ## 운영 자동화 기준
 
-현재 GitHub Actions는 6시간마다 아래 작업을 실행합니다.
+현재 GitHub Actions는 수집 workflow와 게시 workflow로 나뉩니다.
+
+수집 workflow는 6시간마다 아래 작업을 실행합니다.
 
 ```text
 doctor schedule
@@ -93,6 +95,13 @@ status
 collect
 draft
 review request
+notion sync             # Notion 값이 있을 때만
+```
+
+게시 workflow는 1시간마다 아래 작업을 실행합니다.
+
+```text
+status
 channel generate
 instagram render
 instagram upload

@@ -13,8 +13,8 @@ Brand Pilot의 운영 기준 저장소는 Supabase Postgres입니다. SQLite는 
 ## 운영 구성
 
 ```text
-GitHub Actions schedule
-  -> Node CLI job
+GitHub Actions collection/publish schedules
+  -> Node CLI jobs
     -> Supabase Postgres
     -> Supabase Storage
     -> OpenAI API
@@ -29,11 +29,12 @@ Discord interaction
 
 현재 MVP 배포 방식은 무료 우선 구조를 기본값으로 둡니다.
 
-- GitHub Actions schedule이 6시간마다 Node CLI job을 실행합니다.
+- GitHub Actions collection workflow가 6시간마다 수집/초안/검수 요청 job을 실행합니다.
+- GitHub Actions publish workflow가 1시간마다 승인 이후 채널 생성/렌더링/게시/백업/Storage cleanup job을 실행합니다.
 - Supabase Postgres가 운영 상태 DB 역할을 합니다.
 - Supabase Storage가 Instagram 게시용 public image URL을 제공합니다.
 - Supabase Edge Function이 Discord 승인/거절 버튼 이벤트를 처리합니다.
-- 별도 상시 서버나 worker는 게시 즉시성이 더 필요해질 때 분리합니다.
+- 별도 상시 서버나 worker는 1시간 단위보다 더 빠른 게시 즉시성이 필요해질 때 검토합니다.
 
 ## 데이터 소유권
 
