@@ -401,14 +401,16 @@ async function runChannelGenerate(argv) {
 
   for (const item of items) {
     try {
-      const outputs = generateChannelOutputs({
+      const outputs = await generateChannelOutputs({
+        config,
         brand,
         item,
-        channels
+        channels,
+        mock: options.mock
       });
 
       const saved = await saveChannelOutputsForContent(store, item, outputs, {
-        mode: 'template',
+        mode: options.mock ? 'template' : 'openai-channel',
         channelIds: outputs.map((output) => output.channelId)
       });
 
@@ -449,9 +451,7 @@ async function runChannelRegenerate(argv) {
   if (!contentId) {
     throw new Error('channel regenerate requires <content-id>');
   }
-  if (argv.length > 1) {
-    throw new Error(`Unknown option: ${argv[1]}`);
-  }
+  const options = parseOptions(argv.slice(1));
 
   const config = loadConfig();
   const brand = loadBrandConfig(config.cwd);
@@ -465,13 +465,15 @@ async function runChannelRegenerate(argv) {
     throw new Error(`Content item not found: ${contentId}`);
   }
 
-  const outputs = generateChannelOutputs({
+  const outputs = await generateChannelOutputs({
+    config,
     brand,
     item,
-    channels
+    channels,
+    mock: options.mock
   });
   const saved = await regenerateChannelOutputsForContent(store, item, outputs, {
-    mode: 'template-regenerate',
+    mode: options.mock ? 'template-regenerate' : 'openai-channel-regenerate',
     channelIds: outputs.map((output) => output.channelId)
   });
 

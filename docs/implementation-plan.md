@@ -24,7 +24,8 @@
    - Supabase Edge Function으로 버튼 이벤트 처리
    - Edge Function 이전에는 CLI 수동 승인/거절 지원
 6. 채널별 콘텐츠 생성
-   - 승인된 공통 초안을 Instagram 카드뉴스 payload로 변환
+   - 승인된 공통 초안을 다시 GPT API에 보내 Instagram 카드뉴스 payload로 변환
+   - `--mock`일 때만 API 없이 로컬 템플릿 payload로 변환
    - Blog, Facebook, LinkedIn 등 다른 채널로 확장 가능한 구조 유지
 7. Instagram 산출물 생성
    - 1080x1080 카드뉴스 이미지 5장 렌더링
@@ -53,7 +54,8 @@
 - `review request`: Discord 검수 요청 후 `pending_review`로 전환
 - `review approve/reject`: 검수 결과 기록
 - Discord Edge Function: 버튼 클릭으로 Supabase 상태 변경
-- `channel generate`: 승인된 초안을 Instagram 카드뉴스 payload로 변환하고 `channel_generated`로 전환
+- `channel generate`: 승인된 초안을 GPT API로 Instagram 카드뉴스 payload에 맞게 재작성하고 `channel_generated`로 전환
+- `channel generate --mock`: API 호출 없이 로컬 템플릿 payload를 생성해 구조만 검증
 - `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`로 전환
 - `instagram upload`: 로컬 렌더 산출물을 Supabase Storage public bucket에 업로드하고 public manifest URL 기록
 - `instagram publish`: public image URL이 준비된 카드뉴스를 Instagram Graph API로 게시하고 `published`로 전환
@@ -109,15 +111,22 @@ doctor publish          # INSTAGRAM_PUBLISH_ENABLED=true일 때만
 instagram publish       # INSTAGRAM_PUBLISH_ENABLED=true일 때만
 notion sync             # Notion 값이 있을 때만
 notion backup           # Notion 값이 있을 때만
+storage cleanup --confirm # Notion 백업 완료 artifact만 정리
 ```
 
-게시 즉시성이 더 필요해지면 수집/초안 생성용 schedule과 게시 전용 schedule을 분리합니다. 게시 전용 job은 승인 후 생성된 `publish_pending` 항목만 더 자주 확인하도록 만들 수 있습니다.
+토큰 알림 workflow는 매일 아래 작업을 실행합니다.
+
+```text
+alert meta-token-expiry # Meta token 만료 임박/만료 시 Discord 알림
+```
+
+게시 workflow는 승인 후 생성된 작업을 더 자주 확인합니다. 수집/초안/검수 요청은 기존처럼 낮은 빈도로 유지해 불필요한 수집과 GPT 초안 생성 비용을 줄입니다.
 
 ## 남은 개선 후보
 
 - 게시 전용 GitHub Actions workflow 분리
 - Meta token 갱신 운영 절차 자동 알림
-- Supabase Storage cleanup을 운영 schedule에 포함할 시점 결정
+- DB row archive 정책 설계
 - 상태 페이지 또는 간단한 운영 대시보드
 - Blog, Facebook, LinkedIn 채널 template 추가
 - Notion 백업 완료 후 오래된 DB row archive 정책 설계
