@@ -149,3 +149,59 @@ export function createInstagramCardNewsPayload({ brand, item, channel }) {
     }
   };
 }
+
+/**
+ * Adds a leading hash mark to model-provided hashtag text and drops unusable values.
+ */
+function normalizeHashtag(value) {
+  const normalized = normalizeWhitespace(value).replace(/\s+/g, '');
+  if (!normalized) return '';
+  return normalized.startsWith('#') ? normalized : `#${normalized}`;
+}
+
+/**
+ * Prevents inactive CTA URLs from leaking into generated captions.
+ */
+function captionWithoutInactiveCta(caption) {
+  return normalizeWhitespace(caption).replace(/https?:\/\/\S+/gi, '').trim();
+}
+
+/**
+ * Applies GPT-written Instagram copy while preserving renderer-critical template fields.
+ */
+export function applyInstagramCardNewsAdaptation({ brand, item, channel, adaptation }) {
+  const base = createInstagramCardNewsPayload({ brand, item, channel });
+  const adaptedSlides = Array.isArray(adaptation?.slides) ? adaptation.slides : [];
+  const visibleCta = hasVisibleCta(brand);
+  const slides = base.slides.map((baseSlide, index) => {
+    const adapted = adaptedSlides[index] || {};
+    const slide = {
+      ...baseSlide,
+      label: normalizeWhitespace(adapted.label) || baseSlide.label,
+      headline: normalizeWhitespace(adapted.headline) || baseSlide.headline,
+      body: normalizeWhitespace(adapted.body) || baseSlide.body,
+      emphasis: normalizeWhitespace(adapted.emphasis) || baseSlide.emphasis
+    };
+
+    if (!visibleCta) {
+      delete slide.qrTargetUrl;
+    }
+
+    return slide;
+  });
+  const caption = normalizeWhitespace(adaptation?.caption);
+  const hashtags = Array.isArray(adaptation?.hashtags)
+    ? adaptation.hashtags.map(normalizeHashtag).filter(Boolean)
+    : [];
+
+  return {
+    ...base,
+    slides,
+    caption: visibleCta ? caption || base.caption : captionWithoutInactiveCta(caption || base.caption),
+    hashtags: hashtags.length > 0 ? [...new Set(hashtags)] : base.hashtags,
+    generation: {
+      mode: 'openai-channel-adaptation',
+      visualNotes: normalizeWhitespace(adaptation?.visual_notes)
+    }
+  };
+}

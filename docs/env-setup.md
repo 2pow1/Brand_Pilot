@@ -57,7 +57,7 @@ GitHub repository
 | `SUPABASE_SERVICE_ROLE_KEY` | 필요 | Secret | 서버 작업용 Supabase key |
 | `SUPABASE_SCHEMA` | 선택 | workflow 고정값 | 기본값 `public` |
 | `SUPABASE_STORAGE_BUCKET` | 필요 | Variable | Instagram 이미지 업로드 bucket |
-| `OPENAI_API_KEY` | 필요 | Secret | GPT 초안 생성 |
+| `OPENAI_API_KEY` | 필요 | Secret | GPT 공통 초안 생성 및 승인 후 채널별 콘텐츠 변환 |
 | `OPENAI_MODEL` | 선택 | Variable | 기본값 `gpt-4.1-mini` |
 | `OPENAI_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://api.openai.com/v1` |
 | `DISCORD_BOT_TOKEN` | 필요 | Secret | 검수 메시지 전송 |
@@ -156,12 +156,13 @@ OPENAI_MODEL=gpt-4.1-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-운영에서는 비용과 품질 기준에 맞춰 `OPENAI_MODEL`을 조정합니다. 모델명을 바꾼 뒤에는 낮은 limit으로 초안 생성만 먼저 검증합니다.
+운영에서는 비용과 품질 기준에 맞춰 `OPENAI_MODEL`을 조정합니다. 모델명을 바꾼 뒤에는 낮은 limit으로 공통 초안 생성과 승인 후 채널별 변환을 각각 검증합니다.
 
 검증 명령:
 
 ```powershell
 node --no-warnings=ExperimentalWarning src/cli.js draft --limit 1
+node --no-warnings=ExperimentalWarning src/cli.js channel generate --limit 1
 ```
 
 ## Discord

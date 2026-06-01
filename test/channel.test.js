@@ -69,10 +69,12 @@ test('hides CTA and QR data when no CTA URL is configured', () => {
   assert.doesNotMatch(payload.caption, /open-chat|상담 채널 확인하기/);
 });
 
-test('generates outputs for enabled channels only', () => {
-  const outputs = generateChannelOutputs({
+test('generates outputs for enabled channels only', async () => {
+  const outputs = await generateChannelOutputs({
+    config: {},
     brand,
     item,
+    mock: true,
     channels: [
       instagramChannel,
       {
@@ -88,12 +90,14 @@ test('generates outputs for enabled channels only', () => {
   assert.equal(outputs[0].channelId, 'instagram');
 });
 
-test('requires at least one enabled channel', () => {
-  assert.throws(
+test('requires at least one enabled channel', async () => {
+  await assert.rejects(
     () =>
       generateChannelOutputs({
+        config: {},
         brand,
         item,
+        mock: true,
         channels: [
           {
             id: 'instagram',

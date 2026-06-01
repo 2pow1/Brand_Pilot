@@ -4,7 +4,7 @@ Advertising content automation MVP.
 
 Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하기 위한 2주 MVP 프로젝트입니다.
 
-해외 브랜딩/마케팅 자료를 수집하고, GPT API로 공통 초안을 만든 뒤, Discord에서 클라이언트가 승인하거나 거절합니다. 승인된 초안은 채널별 템플릿에 맞춰 변환되며, MVP에서는 Instagram 카드뉴스 생성과 실제 게시까지를 우선 범위로 둡니다.
+해외 브랜딩/마케팅 자료를 수집하고, GPT API로 공통 초안을 만든 뒤, Discord에서 클라이언트가 승인하거나 거절합니다. 승인된 초안은 다시 GPT API로 채널별 포맷에 맞춰 변환되며, MVP에서는 Instagram 카드뉴스 생성과 실제 게시까지를 우선 범위로 둡니다.
 
 ## MVP 범위
 
@@ -92,7 +92,7 @@ node --no-warnings=ExperimentalWarning --test
 
 `review check`는 Discord 메시지를 보내지 않고 봇 토큰과 검수 채널 접근 가능 여부만 확인합니다. `Missing Access`가 나오면 봇이 해당 채널을 볼 수 없다는 뜻이므로 봇 초대 여부, `DISCORD_REVIEW_CHANNEL_ID`, 채널의 `View Channel`/`Send Messages` 권한을 확인합니다. `review request --mock`은 Discord 토큰 없이 검수 요청 흐름을 확인합니다. 실제 Discord 전송은 `.env`의 `DISCORD_BOT_TOKEN`, `DISCORD_REVIEW_CHANNEL_ID`, `DISCORD_BASE_URL`을 사용합니다. 메시지에는 승인/거절 버튼용 `custom_id`가 포함되며, 인터랙션 수신 서버가 붙기 전까지는 `review approve <content-id>` 또는 `review reject <content-id>`로 수동 결정을 기록할 수 있습니다.
 
-`channel generate`는 승인된 공통 초안을 채널별 payload로 변환합니다. 현재 활성 채널은 Instagram이며, 1080x1080 카드뉴스 5장 구조, caption, hashtags, 브랜드명을 `channel_outputs`에 저장합니다. `BRAND_CTA_ENABLED=true`이고 `BRAND_CTA_URL`이 있을 때만 CTA와 QR target URL을 포함합니다. 이미 생성 또는 게시 대기 중인 산출물을 새 브랜드 설정으로 다시 만들 때는 `channel regenerate <content-id>`를 실행한 뒤 `instagram render`, `instagram upload`, `instagram publish` 순서로 다시 진행합니다.
+`channel generate`는 승인된 공통 초안을 다시 GPT API에 보내 채널별 payload로 변환합니다. 현재 활성 채널은 Instagram이며, GPT가 1080x1080 카드뉴스 5장 copy, caption, hashtags를 작성하고 렌더러가 필요한 구조로 `channel_outputs`에 저장합니다. API 없이 구조만 확인하려면 `channel generate --mock`을 사용합니다. `BRAND_CTA_ENABLED=true`이고 `BRAND_CTA_URL`이 있을 때만 CTA와 QR target URL을 포함합니다. 이미 생성 또는 게시 대기 중인 산출물을 새 브랜드 설정으로 다시 만들 때는 `channel regenerate <content-id>`를 실행한 뒤 `instagram render`, `instagram upload`, `instagram publish` 순서로 다시 진행합니다.
 
 `instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 1080x1080 PNG 5장과 `manifest.json`을 생성합니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
 

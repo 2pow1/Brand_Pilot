@@ -22,8 +22,8 @@ Usage:
   node src/cli.js review request [--mock] [--limit <n>]
   node src/cli.js review approve <content-id>
   node src/cli.js review reject <content-id> [reason]
-  node src/cli.js channel generate [--limit <n>]
-  node src/cli.js channel regenerate <content-id>
+  node src/cli.js channel generate [--mock] [--limit <n>]
+  node src/cli.js channel regenerate <content-id> [--mock]
   node src/cli.js instagram render [--limit <n>]
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]

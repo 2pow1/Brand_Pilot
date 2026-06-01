@@ -1,4 +1,5 @@
 import { createInstagramCardNewsPayload } from './instagram.js';
+import { createOpenAiInstagramCardNewsPayload } from './openai.js';
 
 /**
  * Returns only channel definitions that should receive generated output in the current run.
@@ -10,11 +11,19 @@ export function enabledChannels(channels) {
 /**
  * Routes one approved content item through the channel-specific payload generator.
  */
-export function generateChannelOutput({ brand, item, channel }) {
+export async function generateChannelOutput({ config, brand, item, channel, mock = false, fetchImpl = fetch }) {
   if (channel.id === 'instagram' && channel.format === 'card_news') {
     return {
       channelId: channel.id,
-      payload: createInstagramCardNewsPayload({ brand, item, channel })
+      payload: mock
+        ? createInstagramCardNewsPayload({ brand, item, channel })
+        : await createOpenAiInstagramCardNewsPayload({
+            config,
+            brand,
+            item,
+            channel,
+            fetchImpl
+          })
     };
   }
 
@@ -24,14 +33,18 @@ export function generateChannelOutput({ brand, item, channel }) {
 /**
  * Generates payloads for every enabled channel and rejects an empty channel configuration.
  */
-export function generateChannelOutputs({ brand, item, channels }) {
-  const outputs = enabledChannels(channels).map((channel) =>
-    generateChannelOutput({
+export async function generateChannelOutputs({ config, brand, item, channels, mock = false, fetchImpl = fetch }) {
+  const outputs = [];
+  for (const channel of enabledChannels(channels)) {
+    outputs.push(await generateChannelOutput({
+      config,
       brand,
       item,
-      channel
-    })
-  );
+      channel,
+      mock,
+      fetchImpl
+    }));
+  }
 
   if (outputs.length === 0) {
     throw new Error('No enabled channels configured');
