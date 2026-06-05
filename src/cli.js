@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { resolve } from 'node:path';
-import { loadBrandConfig, loadConfig, loadJsonConfig } from './config.js';
+import { loadBrandConfig, loadChannelConfig, loadConfig, loadJsonConfig } from './config.js';
 import { openDatabaseStore } from './database/index.js';
 import { fingerprint } from './ids.js';
 import { CONTENT_STATUSES, contentTransitions } from './state.js';
@@ -389,7 +389,7 @@ async function runChannelGenerate(argv) {
   const options = parseOptions(argv);
   const config = loadConfig();
   const brand = loadBrandConfig(config.cwd);
-  const channels = loadJsonConfig(resolve(config.cwd, 'config/channels.json'));
+  const channels = loadChannelConfig(config.cwd, config);
   const { generateChannelOutputs } = await import('./channel/index.js');
   const { saveChannelOutputsForContent } = await import('./repository.js');
   const { store } = await openAppDatabase();
@@ -455,7 +455,7 @@ async function runChannelRegenerate(argv) {
 
   const config = loadConfig();
   const brand = loadBrandConfig(config.cwd);
-  const channels = loadJsonConfig(resolve(config.cwd, 'config/channels.json'));
+  const channels = loadChannelConfig(config.cwd, config);
   const { generateChannelOutputs } = await import('./channel/index.js');
   const { regenerateChannelOutputsForContent } = await import('./repository.js');
   const { store } = await openAppDatabase();

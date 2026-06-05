@@ -17,6 +17,7 @@ const DEFAULT_NOTION_VERSION = '2026-03-11';
 const DEFAULT_BRAND_COMPANY_NAME = 'GrowthLine';
 const DEFAULT_BRAND_VOICE = 'clear, practical, founder-friendly';
 const DEFAULT_BRAND_SERVICE_SUMMARY = 'Branding and marketing support for small businesses.';
+const INSTAGRAM_TEMPLATES = new Set(['instagram-card-news-v1', 'instagram-sketch-card-news-v2']);
 
 /**
  * Parses simple KEY=value lines from a local .env file.
@@ -91,6 +92,7 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     openaiImageSize: merged.OPENAI_IMAGE_SIZE || DEFAULT_OPENAI_IMAGE_SIZE,
     openaiImageQuality: merged.OPENAI_IMAGE_QUALITY || DEFAULT_OPENAI_IMAGE_QUALITY,
     instagramCoverImageEnabled: envFlag(merged.INSTAGRAM_COVER_IMAGE_ENABLED, false),
+    instagramTemplate: merged.INSTAGRAM_TEMPLATE || '',
     discordBotToken: merged.DISCORD_BOT_TOKEN || '',
     discordReviewChannelId: merged.DISCORD_REVIEW_CHANNEL_ID || '',
     discordBaseUrl: merged.DISCORD_BASE_URL || DEFAULT_DISCORD_BASE_URL,
@@ -114,6 +116,34 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
  */
 export function loadJsonConfig(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/**
+ * Applies runtime channel overrides without editing the checked-in channel config.
+ */
+export function applyChannelOverrides(channels, config = {}) {
+  const instagramTemplate = String(config.instagramTemplate || '').trim();
+  if (!instagramTemplate) return channels;
+
+  if (!INSTAGRAM_TEMPLATES.has(instagramTemplate)) {
+    throw new Error(`Unsupported INSTAGRAM_TEMPLATE: ${instagramTemplate}`);
+  }
+
+  return channels.map((channel) =>
+    channel.id === 'instagram'
+      ? {
+          ...channel,
+          template: instagramTemplate
+        }
+      : channel
+  );
+}
+
+/**
+ * Loads channel definitions and applies env-controlled runtime overrides.
+ */
+export function loadChannelConfig(cwd = process.cwd(), config = {}) {
+  return applyChannelOverrides(loadJsonConfig(resolve(cwd, 'config/channels.json')), config);
 }
 
 /**

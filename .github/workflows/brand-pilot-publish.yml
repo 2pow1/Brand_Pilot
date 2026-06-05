@@ -34,6 +34,7 @@ jobs:
       META_GRAPH_BASE_URL: https://graph.facebook.com/v25.0
       INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
       INSTAGRAM_PUBLISH_ENABLED: ${{ vars.INSTAGRAM_PUBLISH_ENABLED || 'false' }}
+      INSTAGRAM_TEMPLATE: ${{ vars.INSTAGRAM_TEMPLATE || '' }}
       INSTAGRAM_COVER_IMAGE_ENABLED: ${{ vars.INSTAGRAM_COVER_IMAGE_ENABLED || 'false' }}
       BRAND_COMPANY_NAME: ${{ vars.BRAND_COMPANY_NAME || 'GrowthLine' }}
       BRAND_VOICE: ${{ vars.BRAND_VOICE || 'clear, practical, founder-friendly' }}

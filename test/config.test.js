@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
-import { loadBrandConfig, loadConfig } from '../src/config.js';
+import { applyChannelOverrides, loadBrandConfig, loadConfig } from '../src/config.js';
 
 const EMPTY_ENV_CWD = resolve(process.cwd(), 'tmp/no-env-config-test');
 
@@ -83,4 +83,54 @@ test('loads brand identity overrides from environment', () => {
   assert.equal(brand.cta.enabled, false);
   assert.equal(brand.cta.label, 'Join');
   assert.equal(brand.cta.url, 'https://example.com/open-chat');
+});
+
+test('loads Instagram template override from environment', () => {
+  const config = loadConfig({
+    cwd: EMPTY_ENV_CWD,
+    env: {
+      INSTAGRAM_TEMPLATE: 'instagram-sketch-card-news-v2'
+    }
+  });
+
+  assert.equal(config.instagramTemplate, 'instagram-sketch-card-news-v2');
+});
+
+test('applies Instagram template override to channel config', () => {
+  const channels = applyChannelOverrides(
+    [
+      {
+        id: 'instagram',
+        template: 'instagram-card-news-v1'
+      },
+      {
+        id: 'blog',
+        template: 'blog-article-v1'
+      }
+    ],
+    {
+      instagramTemplate: 'instagram-sketch-card-news-v2'
+    }
+  );
+
+  assert.equal(channels[0].template, 'instagram-sketch-card-news-v2');
+  assert.equal(channels[1].template, 'blog-article-v1');
+});
+
+test('rejects unsupported Instagram template overrides', () => {
+  assert.throws(
+    () =>
+      applyChannelOverrides(
+        [
+          {
+            id: 'instagram',
+            template: 'instagram-card-news-v1'
+          }
+        ],
+        {
+          instagramTemplate: 'unknown-template'
+        }
+      ),
+    /Unsupported INSTAGRAM_TEMPLATE/
+  );
 });
