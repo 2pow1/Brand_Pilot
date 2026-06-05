@@ -529,13 +529,13 @@ async function runInstagramRender(argv) {
   for (const row of rows) {
     try {
       const payload = JSON.parse(row.channel_payload_json);
-      const result = renderInstagramCardNews({
+      const result = await renderInstagramCardNews({
         cwd: config.cwd,
         contentItemId: row.id,
         payload
       });
       const saved = await markChannelOutputRendered(store, row, row, result.outputDir, {
-        mode: 'powershell-system-drawing',
+        mode: result.mode || 'renderer',
         slideCount: result.slides.length,
         manifestPath: result.manifestPath
       });

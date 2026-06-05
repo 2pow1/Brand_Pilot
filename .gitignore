@@ -9,6 +9,7 @@ build/
 .next/
 out/
 coverage/
+.cache/
 
 # Local env and secrets
 .env
