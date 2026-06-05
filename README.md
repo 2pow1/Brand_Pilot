@@ -95,7 +95,7 @@ node --no-warnings=ExperimentalWarning --test
 
 `channel generate`는 승인된 공통 초안을 다시 GPT API에 보내 채널별 payload로 변환합니다. 현재 활성 채널은 Instagram이며, 기본 템플릿은 `instagram-card-news-v1`입니다. v2 스케치 노트 템플릿을 검증할 때는 `.env` 또는 GitHub Variables에 `INSTAGRAM_TEMPLATE=instagram-sketch-card-news-v2`를 설정합니다. API 없이 구조만 확인하려면 `channel generate --mock`을 사용합니다. `BRAND_CTA_ENABLED=true`이고 `BRAND_CTA_URL`이 있을 때만 CTA와 QR target URL을 포함합니다. 이미 생성 또는 게시 대기 중인 산출물을 새 브랜드 설정으로 다시 만들 때는 `channel regenerate <content-id>`를 실행한 뒤 `instagram render`, `instagram upload`, `instagram publish` 순서로 다시 진행합니다.
 
-`instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 PNG 카드뉴스와 `manifest.json`을 생성합니다. v1은 1080x1080 5장, v2는 1080x1350 최대 8장입니다. `INSTAGRAM_COVER_IMAGE_ENABLED=true`이면 v2 Cover 배경 이미지를 OpenAI Image API로 생성한 뒤 HTML/CSS 렌더러가 문구를 올립니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
+`instagram preview-sketch`는 DB/API를 사용하지 않고 v2 스케치 노트 템플릿 샘플 PNG를 `artifacts/generated/instagram/preview_instagram_sketch_v2`에 생성합니다. `instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 PNG 카드뉴스와 `manifest.json`을 생성합니다. v1은 1080x1080 5장, v2는 1080x1350 최대 8장입니다. `INSTAGRAM_COVER_IMAGE_ENABLED=true`이면 v2 Cover 배경 이미지를 OpenAI Image API로 생성한 뒤 HTML/CSS 렌더러가 문구를 올립니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
 
 `instagram upload`는 렌더된 PNG와 manifest를 Supabase Storage public bucket에 업로드하고, `channel_outputs.artifact_path`를 공개 manifest URL로 바꿉니다.
 

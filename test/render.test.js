@@ -7,6 +7,7 @@ import {
   prepareCoverImage,
   toCssImageUrl
 } from '../src/render/instagram-sketch.js';
+import { createInstagramSketchPreviewPayload } from '../src/render/instagram-preview.js';
 
 test('builds deterministic Instagram render paths', () => {
   const paths = buildInstagramRenderPaths({
@@ -59,6 +60,22 @@ test('builds sketch template HTML from a v2 cover card', () => {
   assert.match(html, /Customers read<br>signals first/);
   assert.match(html, /GrowthLine/);
   assert.doesNotMatch(html, /<script>/);
+});
+
+test('builds a deterministic sketch preview payload', () => {
+  const payload = createInstagramSketchPreviewPayload({
+    brand: {
+      companyName: 'GrowthLine'
+    }
+  });
+
+  assert.equal(payload.template, 'instagram-sketch-card-news-v2');
+  assert.equal(payload.dimensions.width, 1080);
+  assert.equal(payload.dimensions.height, 1350);
+  assert.equal(payload.cards.length, 8);
+  assert.equal(payload.cards[0].layout, '01');
+  assert.equal(payload.cards.at(-1).layout, '09');
+  assert.equal(payload.coverImagePrompt.includes('no readable text'), true);
 });
 
 test('converts local cover image paths to file URLs for sketch rendering', () => {

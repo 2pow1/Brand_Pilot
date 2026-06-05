@@ -24,6 +24,7 @@ Usage:
   node src/cli.js review reject <content-id> [reason]
   node src/cli.js channel generate [--mock] [--limit <n>]
   node src/cli.js channel regenerate <content-id> [--mock]
+  node src/cli.js instagram preview-sketch
   node src/cli.js instagram render [--limit <n>]
   node src/cli.js instagram upload [--limit <n>]
   node src/cli.js instagram publish [--mock] [--limit <n>]
@@ -511,6 +512,40 @@ async function runChannel(argv) {
 }
 
 /**
+ * Renders a deterministic v2 sample without reading or mutating pipeline state.
+ */
+async function runInstagramPreviewSketch(argv) {
+  if (argv.length > 0) {
+    throw new Error('instagram preview-sketch does not accept options');
+  }
+
+  const config = loadConfig();
+  const brand = loadBrandConfig(config.cwd);
+  const { renderInstagramCardNews } = await import('./render/instagram.js');
+  const { createInstagramSketchPreviewPayload } = await import('./render/instagram-preview.js');
+  const payload = createInstagramSketchPreviewPayload({ brand });
+  const result = await renderInstagramCardNews({
+    cwd: config.cwd,
+    contentItemId: 'preview_instagram_sketch_v2',
+    payload,
+    config: {
+      ...config,
+      instagramCoverImageEnabled: false
+    }
+  });
+
+  console.log(JSON.stringify({
+    mode: 'preview-sketch',
+    template: payload.template,
+    coverImageEnabled: false,
+    outputDir: result.outputDir,
+    manifestPath: result.manifestPath,
+    slideCount: result.slides.length,
+    slides: result.slides
+  }, null, 2));
+}
+
+/**
  * Renders Instagram card-news payloads into local PNG artifacts.
  */
 async function runInstagramRender(argv) {
@@ -741,14 +776,16 @@ async function runInstagramUpload(argv) {
 async function runInstagram(argv) {
   const action = argv[0];
 
-  if (action === 'render') {
+  if (action === 'preview-sketch') {
+    await runInstagramPreviewSketch(argv.slice(1));
+  } else if (action === 'render') {
     await runInstagramRender(argv.slice(1));
   } else if (action === 'upload') {
     await runInstagramUpload(argv.slice(1));
   } else if (action === 'publish') {
     await runInstagramPublish(argv.slice(1));
   } else {
-    throw new Error('instagram command must be one of: render, upload, publish');
+    throw new Error('instagram command must be one of: preview-sketch, render, upload, publish');
   }
 }
 
