@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { generateOpenAiImage } from '../openai/image.js';
 
 export const INSTAGRAM_SKETCH_CARD_NEWS_TEMPLATE = 'instagram-sketch-card-news-v2';
 
@@ -57,6 +58,40 @@ export function resolveCoverImage({ cwd, payload }) {
       payload.coverImage?.path ||
       ''
   });
+}
+
+/**
+ * Generates a cover background image only when the feature is explicitly enabled.
+ */
+export async function prepareCoverImage({ config = {}, outputDir, payload, fetchImpl = fetch }) {
+  if (!config.instagramCoverImageEnabled) return payload;
+  if (resolveCoverImage({ cwd: config.cwd || process.cwd(), payload })) return payload;
+  if (!text(payload.coverImagePrompt)) return payload;
+
+  mkdirSync(outputDir, { recursive: true });
+  const outputPath = join(outputDir, 'cover-background.png');
+  const image = await generateOpenAiImage({
+    config,
+    prompt: payload.coverImagePrompt,
+    outputPath,
+    fetchImpl
+  });
+
+  return {
+    ...payload,
+    coverImagePath: outputPath,
+    coverImage: {
+      status: 'generated',
+      path: outputPath,
+      model: image.model,
+      size: image.size,
+      quality: image.quality,
+      source: image.source,
+      prompt: payload.coverImagePrompt,
+      generatedPrompt: image.prompt,
+      usage: image.usage
+    }
+  };
 }
 
 /**
@@ -564,18 +599,27 @@ async function loadChromium() {
 /**
  * Renders the v2 GrowthLine sketch card-news payload through Chromium screenshots.
  */
-export async function renderInstagramSketchCardNews({ cwd, contentItemId, payload, paths }) {
-  const cards = Array.isArray(payload.cards) ? payload.cards : [];
+export async function renderInstagramSketchCardNews({ cwd, contentItemId, payload, paths, config, fetchImpl = fetch }) {
+  const outputDir = paths?.outputDir || resolve(cwd, 'artifacts/generated/instagram', contentItemId);
+  mkdirSync(outputDir, { recursive: true });
+
+  const renderPayload = await prepareCoverImage({
+    config: {
+      ...config,
+      cwd
+    },
+    outputDir,
+    payload,
+    fetchImpl
+  });
+  const cards = Array.isArray(renderPayload.cards) ? renderPayload.cards : [];
   if (cards.length === 0) {
     throw new Error('Instagram sketch renderer requires payload.cards.');
   }
 
-  const outputDir = paths?.outputDir || resolve(cwd, 'artifacts/generated/instagram', contentItemId);
-  mkdirSync(outputDir, { recursive: true });
-
   const chromium = await loadChromium();
-  const width = Number(payload.dimensions?.width || 1080);
-  const height = Number(payload.dimensions?.height || 1350);
+  const width = Number(renderPayload.dimensions?.width || 1080);
+  const height = Number(renderPayload.dimensions?.height || 1350);
   const browser = await chromium.launch({ headless: true });
   const slides = [];
 
@@ -591,7 +635,7 @@ export async function renderInstagramSketchCardNews({ cwd, contentItemId, payloa
       const outputPath = join(outputDir, fileName);
       const html = buildInstagramSketchCardHtml({
         cwd,
-        payload,
+        payload: renderPayload,
         card,
         total: cards.length
       });
@@ -609,13 +653,13 @@ export async function renderInstagramSketchCardNews({ cwd, contentItemId, payloa
   const manifest = {
     outputDir,
     slides,
-    caption: payload.caption,
-    hashtags: payload.hashtags,
-    source: payload.source,
-    template: payload.template,
-    dimensions: payload.dimensions,
-    coverImagePrompt: payload.coverImagePrompt,
-    coverImage: payload.coverImage || null
+    caption: renderPayload.caption,
+    hashtags: renderPayload.hashtags,
+    source: renderPayload.source,
+    template: renderPayload.template,
+    dimensions: renderPayload.dimensions,
+    coverImagePrompt: renderPayload.coverImagePrompt,
+    coverImage: renderPayload.coverImage || null
   };
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
 

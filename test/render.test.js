@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildInstagramRenderPaths } from '../src/render/instagram.js';
-import { buildInstagramSketchCardHtml, escapeHtml, toCssImageUrl } from '../src/render/instagram-sketch.js';
+import {
+  buildInstagramSketchCardHtml,
+  escapeHtml,
+  prepareCoverImage,
+  toCssImageUrl
+} from '../src/render/instagram-sketch.js';
 
 test('builds deterministic Instagram render paths', () => {
   const paths = buildInstagramRenderPaths({
@@ -64,4 +69,32 @@ test('converts local cover image paths to file URLs for sketch rendering', () =>
 
   assert.match(cssUrl, /^url\("file:\/\/\//);
   assert.match(cssUrl.replaceAll('\\', '/'), /artifacts\/generated\/cover\.png/);
+});
+
+test('generates a cover image when sketch cover images are enabled', async () => {
+  const outputDir = 'D:/workspace/Brand_Pilot/tmp/render-test';
+  const fetchImpl = async () =>
+    Response.json({
+      data: [{ b64_json: Buffer.from('image').toString('base64') }]
+    });
+  const payload = await prepareCoverImage({
+    config: {
+      cwd: 'D:/workspace/Brand_Pilot',
+      instagramCoverImageEnabled: true,
+      openaiApiKey: 'test-key',
+      openaiBaseUrl: 'https://api.openai.com/v1',
+      openaiImageModel: 'gpt-image-1',
+      openaiImageSize: '1024x1536',
+      openaiImageQuality: 'medium'
+    },
+    outputDir,
+    payload: {
+      coverImagePrompt: 'Warm paper background'
+    },
+    fetchImpl
+  });
+
+  assert.match(payload.coverImagePath.replaceAll('\\', '/'), /tmp\/render-test\/cover-background\.png$/);
+  assert.equal(payload.coverImage.status, 'generated');
+  assert.equal(payload.coverImage.model, 'gpt-image-1');
 });

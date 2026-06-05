@@ -64,7 +64,7 @@ function renderLegacyInstagramCardNews({ cwd, paths }) {
 /**
  * Runs the renderer selected by the Instagram payload template.
  */
-export async function renderInstagramCardNews({ cwd, contentItemId, payload }) {
+export async function renderInstagramCardNews({ cwd, contentItemId, payload, config, fetchImpl = fetch }) {
   const paths = buildInstagramRenderPaths({ cwd, contentItemId });
   mkdirSync(paths.outputDir, { recursive: true });
   mkdirSync(resolve(cwd, 'tmp/render'), { recursive: true });
@@ -75,7 +75,9 @@ export async function renderInstagramCardNews({ cwd, contentItemId, payload }) {
       cwd,
       contentItemId,
       payload,
-      paths
+      paths,
+      config,
+      fetchImpl
     });
   }
 

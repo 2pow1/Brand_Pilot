@@ -532,7 +532,8 @@ async function runInstagramRender(argv) {
       const result = await renderInstagramCardNews({
         cwd: config.cwd,
         contentItemId: row.id,
-        payload
+        payload,
+        config
       });
       const saved = await markChannelOutputRendered(store, row, row, result.outputDir, {
         mode: result.mode || 'renderer',

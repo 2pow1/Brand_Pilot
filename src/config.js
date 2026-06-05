@@ -7,6 +7,9 @@ const DEFAULT_SUPABASE_SCHEMA = 'public';
 const DEFAULT_SUPABASE_STORAGE_BUCKET = 'brand-pilot-instagram';
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
+const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-1';
+const DEFAULT_OPENAI_IMAGE_SIZE = '1024x1536';
+const DEFAULT_OPENAI_IMAGE_QUALITY = 'medium';
 const DEFAULT_DISCORD_BASE_URL = 'https://discord.com/api/v10';
 const DEFAULT_META_GRAPH_BASE_URL = 'https://graph.facebook.com/v25.0';
 const DEFAULT_NOTION_BASE_URL = 'https://api.notion.com/v1';
@@ -55,6 +58,14 @@ function loadDotEnv(cwd) {
 }
 
 /**
+ * Reads feature flags from env values without treating arbitrary text as enabled.
+ */
+function envFlag(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  return String(value).trim().toLowerCase() === 'true';
+}
+
+/**
  * Merges local .env values and process environment into the runtime configuration object.
  */
 export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
@@ -76,6 +87,10 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     openaiApiKey: merged.OPENAI_API_KEY || '',
     openaiModel: merged.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
     openaiBaseUrl: merged.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL,
+    openaiImageModel: merged.OPENAI_IMAGE_MODEL || DEFAULT_OPENAI_IMAGE_MODEL,
+    openaiImageSize: merged.OPENAI_IMAGE_SIZE || DEFAULT_OPENAI_IMAGE_SIZE,
+    openaiImageQuality: merged.OPENAI_IMAGE_QUALITY || DEFAULT_OPENAI_IMAGE_QUALITY,
+    instagramCoverImageEnabled: envFlag(merged.INSTAGRAM_COVER_IMAGE_ENABLED, false),
     discordBotToken: merged.DISCORD_BOT_TOKEN || '',
     discordReviewChannelId: merged.DISCORD_REVIEW_CHANNEL_ID || '',
     discordBaseUrl: merged.DISCORD_BASE_URL || DEFAULT_DISCORD_BASE_URL,
