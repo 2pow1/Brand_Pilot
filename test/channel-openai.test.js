@@ -26,6 +26,11 @@ const channel = {
   template: 'instagram-card-news-v1'
 };
 
+const sketchChannel = {
+  ...channel,
+  template: 'instagram-sketch-card-news-v2'
+};
+
 test('creates Instagram payload from OpenAI channel adaptation', async () => {
   const responsePayload = {
     slides: [
@@ -82,4 +87,77 @@ test('requires OpenAI key for real channel adaptation', async () => {
       }),
     /OPENAI_API_KEY/
   );
+});
+
+test('creates sketch-template Instagram payloads from OpenAI channel adaptation', async () => {
+  const responsePayload = {
+    content_title: 'Sketch content title',
+    content_angle: 'Show why promotion needs clearer structure.',
+    recommended_layout_flow: ['01', '03', '05', '09'],
+    cover_image_prompt: 'Sketch note background with warm paper texture and lime accents, no readable text.',
+    caption: 'Caption without links',
+    hashtags: ['GrowthLine', 'branding'],
+    cards: [
+      {
+        layout: '01',
+        layout_name: 'Cover',
+        usage_reason: 'Start with a strong cover.',
+        series: 'GrowthLine Note',
+        kicker: 'BRAND NOTE',
+        title: 'Why promotion\nfeels unclear',
+        subtitle: 'A short practical note'
+      },
+      {
+        layout: '03',
+        layout_name: 'Problem / Solution',
+        usage_reason: 'The source suggests a clear problem and direction.',
+        title: 'Problem and direction',
+        problem_title: 'Problem',
+        problem: 'Customers do not understand the difference.',
+        solution_title: 'Solution',
+        solution: 'Clarify the message before adding more channels.'
+      },
+      {
+        layout: '05',
+        layout_name: 'Checklist',
+        usage_reason: 'Give the reader a practical check.',
+        title: 'Check this first',
+        items: ['Audience is clear', 'Problem is specific', 'Solution is simple', 'Next action is natural']
+      },
+      {
+        layout: '09',
+        layout_name: 'Closing',
+        usage_reason: 'End with a save-worthy note.',
+        title: 'More posts are not always the answer',
+        description: 'Make the message easier to understand first.',
+        cta: 'Save this and check your content again.'
+      }
+    ]
+  };
+
+  const payload = await createOpenAiInstagramCardNewsPayload({
+    config: {
+      openaiApiKey: 'test-key',
+      openaiBaseUrl: 'https://api.openai.test/v1',
+      openaiModel: 'gpt-test'
+    },
+    brand,
+    item,
+    channel: sketchChannel,
+    fetchImpl: async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.text.format.name, 'brand_pilot_instagram_sketch_channel');
+      return Response.json({
+        output_text: JSON.stringify(responsePayload)
+      });
+    }
+  });
+
+  assert.equal(payload.template, 'instagram-sketch-card-news-v2');
+  assert.equal(payload.cards.length, 4);
+  assert.equal(payload.cards[0].layout, '01');
+  assert.equal(payload.cards.at(-1).layout, '09');
+  assert.equal(payload.coverImagePrompt, responsePayload.cover_image_prompt);
+  assert.deepEqual(payload.hashtags, ['#GrowthLine', '#branding']);
+  assert.equal(payload.generation.mode, 'openai-sketch-channel-adaptation');
 });

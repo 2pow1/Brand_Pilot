@@ -1,7 +1,28 @@
 import { extractResponseText } from '../draft/openai.js';
-import { INSTAGRAM_CHANNEL_RESPONSE_SCHEMA } from './schema.js';
-import { applyInstagramCardNewsAdaptation } from './instagram.js';
-import { buildInstagramChannelPrompt } from './prompt.js';
+import { INSTAGRAM_CHANNEL_RESPONSE_SCHEMA, INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA } from './schema.js';
+import { applyInstagramCardNewsAdaptation, applyInstagramSketchCardNewsAdaptation } from './instagram.js';
+import { buildInstagramChannelPrompt, buildInstagramSketchCardNewsPrompt } from './prompt.js';
+
+/**
+ * Selects the prompt, schema, and adapter for the configured Instagram template.
+ */
+function instagramTemplateSpec(channel) {
+  if (channel.template === 'instagram-sketch-card-news-v2') {
+    return {
+      responseName: 'brand_pilot_instagram_sketch_channel',
+      schema: INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA,
+      prompt: buildInstagramSketchCardNewsPrompt,
+      apply: applyInstagramSketchCardNewsAdaptation
+    };
+  }
+
+  return {
+    responseName: 'brand_pilot_instagram_channel',
+    schema: INSTAGRAM_CHANNEL_RESPONSE_SCHEMA,
+    prompt: buildInstagramChannelPrompt,
+    apply: applyInstagramCardNewsAdaptation
+  };
+}
 
 /**
  * Calls the OpenAI Responses API for channel-specific Instagram adaptation.
@@ -17,7 +38,8 @@ export async function createOpenAiInstagramCardNewsPayload({
     throw new Error('OPENAI_API_KEY is required for channel-specific GPT generation. Use --mock for template output.');
   }
 
-  const prompt = buildInstagramChannelPrompt({ brand, item, channel });
+  const spec = instagramTemplateSpec(channel);
+  const prompt = spec.prompt({ brand, item, channel });
   const response = await fetchImpl(`${config.openaiBaseUrl}/responses`, {
     method: 'POST',
     headers: {
@@ -39,9 +61,9 @@ export async function createOpenAiInstagramCardNewsPayload({
       text: {
         format: {
           type: 'json_schema',
-          name: 'brand_pilot_instagram_channel',
+          name: spec.responseName,
           strict: true,
-          schema: INSTAGRAM_CHANNEL_RESPONSE_SCHEMA
+          schema: spec.schema
         }
       }
     })
@@ -57,7 +79,7 @@ export async function createOpenAiInstagramCardNewsPayload({
     throw new Error('OpenAI response did not include channel output text');
   }
 
-  return applyInstagramCardNewsAdaptation({
+  return spec.apply({
     brand,
     item,
     channel,

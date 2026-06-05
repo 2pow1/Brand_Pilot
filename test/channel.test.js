@@ -31,6 +31,11 @@ const instagramChannel = {
   template: 'instagram-card-news-v1'
 };
 
+const instagramSketchChannel = {
+  ...instagramChannel,
+  template: 'instagram-sketch-card-news-v2'
+};
+
 test('creates a five-slide Instagram card news payload with configured CTA', () => {
   const payload = createInstagramCardNewsPayload({
     brand,
@@ -88,6 +93,27 @@ test('generates outputs for enabled channels only', async () => {
 
   assert.equal(outputs.length, 1);
   assert.equal(outputs[0].channelId, 'instagram');
+});
+
+test('generates sketch-template Instagram payloads when v2 template is configured', async () => {
+  const outputs = await generateChannelOutputs({
+    config: {},
+    brand,
+    item,
+    mock: true,
+    channels: [instagramSketchChannel]
+  });
+
+  const payload = outputs[0].payload;
+
+  assert.equal(payload.template, 'instagram-sketch-card-news-v2');
+  assert.equal(payload.dimensions.width, 1080);
+  assert.equal(payload.dimensions.height, 1350);
+  assert.equal(payload.cards[0].layout, '01');
+  assert.equal(payload.cards.at(-1).layout, '09');
+  assert.ok(payload.cards.length <= 8);
+  assert.equal(payload.coverImagePrompt.length > 0, true);
+  assert.equal(payload.generation.schema, 'instagram-sketch-card-news-v2');
 });
 
 test('requires at least one enabled channel', async () => {

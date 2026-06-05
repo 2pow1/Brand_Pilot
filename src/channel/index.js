@@ -1,5 +1,16 @@
-import { createInstagramCardNewsPayload } from './instagram.js';
+import { createInstagramCardNewsPayload, createInstagramSketchCardNewsPayload } from './instagram.js';
 import { createOpenAiInstagramCardNewsPayload } from './openai.js';
+
+/**
+ * Returns the deterministic mock generator for the configured Instagram template.
+ */
+function createMockInstagramPayload({ brand, item, channel }) {
+  if (channel.template === 'instagram-sketch-card-news-v2') {
+    return createInstagramSketchCardNewsPayload({ brand, item, channel });
+  }
+
+  return createInstagramCardNewsPayload({ brand, item, channel });
+}
 
 /**
  * Returns only channel definitions that should receive generated output in the current run.
@@ -16,7 +27,7 @@ export async function generateChannelOutput({ config, brand, item, channel, mock
     return {
       channelId: channel.id,
       payload: mock
-        ? createInstagramCardNewsPayload({ brand, item, channel })
+        ? createMockInstagramPayload({ brand, item, channel })
         : await createOpenAiInstagramCardNewsPayload({
             config,
             brand,

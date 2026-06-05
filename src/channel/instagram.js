@@ -205,3 +205,194 @@ export function applyInstagramCardNewsAdaptation({ brand, item, channel, adaptat
     }
   };
 }
+
+/**
+ * Trims card text while preserving intentional line breaks for HTML layouts.
+ */
+function normalizeSketchText(value) {
+  return (value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Creates deterministic sketch-template content for mock generation and fallback tests.
+ */
+function createDefaultSketchAdaptation({ brand, item }) {
+  const companyName = brand.companyName || 'GrowthLine';
+  const title = item.draft_title || item.source_title;
+  const body = item.draft_body || item.raw_excerpt || item.source_title;
+
+  return {
+    content_title: title,
+    content_angle: '작은 사업자가 홍보가 막히는 이유를 메시지 구조 관점에서 점검한다.',
+    recommended_layout_flow: ['01', '03', '05', '09'],
+    cover_image_prompt:
+      'A hand-drawn Korean brand strategy sketch note background for a small business marketing insight, warm paper texture, black ink lines, lime accent, no readable text.',
+    caption: `${title}\n\n${truncate(body, 220)}`,
+    hashtags: ['GrowthLine', '브랜딩', '작은사업홍보'],
+    cards: [
+      {
+        layout: '01',
+        layout_name: 'Cover',
+        usage_reason: '콘텐츠의 핵심 문제를 첫 장에서 바로 보여주기 위해 사용한다.',
+        series: 'GrowthLine Note',
+        kicker: 'BRAND NOTE',
+        title,
+        subtitle: '홍보가 많아도 고객이 이해하지 못하면 문의로 이어지지 않습니다.'
+      },
+      {
+        layout: '03',
+        layout_name: 'Problem / Solution',
+        usage_reason: '문제와 해결 방향이 명확한 흐름이기 때문에 사용한다.',
+        title: '홍보가 쌓여도\n반응이 약한 이유',
+        problem_title: 'Problem',
+        problem: truncate(body, 120),
+        solution_title: 'Solution',
+        solution: '채널을 늘리기 전에\n고객이 이해할 메시지 구조부터 정리해야 합니다.'
+      },
+      {
+        layout: '05',
+        layout_name: 'Checklist',
+        usage_reason: '실무자가 바로 점검할 수 있는 항목으로 전환하기 위해 사용한다.',
+        title: '먼저 점검할 4가지',
+        items: [
+          '고객이 누구인지 바로 보이는가',
+          '고객의 문제가 구체적으로 드러나는가',
+          '해결 방식이 어렵지 않게 설명되는가',
+          '다음 행동이 자연스럽게 이어지는가'
+        ]
+      },
+      {
+        layout: '09',
+        layout_name: 'Closing',
+        usage_reason: '과한 판매 문구 없이 저장하고 다시 보게 만들기 위해 사용한다.',
+        title: '홍보는 더 많이보다\n더 선명하게',
+        description: `${companyName}은 작은 사업의 메시지와 홍보 구조를 고객이 이해하기 쉬운 흐름으로 정리합니다.`,
+        cta: '이 기준은 저장해두고 다시 점검해보세요.'
+      }
+    ]
+  };
+}
+
+/**
+ * Normalizes layout-specific card fields without losing the selected layout shape.
+ */
+function normalizeSketchCard(card, index, total) {
+  const normalized = {
+    index,
+    page: `${index}/${total}`,
+    ...card,
+    layout: normalizeSketchText(card.layout),
+    layout_name: normalizeSketchText(card.layout_name),
+    usage_reason: normalizeSketchText(card.usage_reason)
+  };
+
+  for (const [key, value] of Object.entries(normalized)) {
+    if (typeof value === 'string') {
+      normalized[key] = normalizeSketchText(value);
+    }
+  }
+
+  if (Array.isArray(card.steps)) {
+    normalized.steps = card.steps.map((step) => ({
+      title: normalizeSketchText(step.title),
+      description: normalizeSketchText(step.description)
+    }));
+  }
+
+  if (Array.isArray(card.items)) {
+    normalized.items = card.items.map((item) => {
+      if (typeof item === 'string') return normalizeSketchText(item);
+      return {
+        number: normalizeSketchText(item.number),
+        text: normalizeSketchText(item.text)
+      };
+    });
+  }
+
+  return normalized;
+}
+
+/**
+ * Enforces the v2 card flow contract before a payload is stored.
+ */
+function assertSketchCardFlow(cards) {
+  if (!Array.isArray(cards) || cards.length < 2 || cards.length > 8) {
+    throw new Error('Instagram sketch card-news requires 2 to 8 cards.');
+  }
+
+  if (cards[0].layout !== '01') {
+    throw new Error('Instagram sketch card-news must start with layout 01 Cover.');
+  }
+
+  if (cards.at(-1).layout !== '09') {
+    throw new Error('Instagram sketch card-news must end with layout 09 Closing.');
+  }
+}
+
+/**
+ * Applies GPT-written sketch-template content while preserving pipeline-critical fields.
+ */
+export function applyInstagramSketchCardNewsAdaptation({ brand, item, channel, adaptation }) {
+  const companyName = brand.companyName || 'GrowthLine';
+  const selected = adaptation || createDefaultSketchAdaptation({ brand, item });
+  const rawCards = Array.isArray(selected.cards) ? selected.cards.slice(0, 8) : [];
+  const cards = rawCards.map((card, index) => normalizeSketchCard(card, index + 1, rawCards.length));
+  assertSketchCardFlow(cards);
+
+  const hashtags = Array.isArray(selected.hashtags)
+    ? selected.hashtags.map(normalizeHashtag).filter(Boolean)
+    : [];
+  const caption = normalizeSketchText(selected.caption);
+
+  return {
+    channelId: 'instagram',
+    brandName: companyName,
+    format: channel.format,
+    template: channel.template,
+    dimensions: {
+      width: 1080,
+      height: 1350
+    },
+    design: {
+      background: '#f7f1e3',
+      foreground: '#151515',
+      muted: '#706b61',
+      accent: '#c9f24d',
+      border: '#1c1c1c',
+      templateStyle: 'sketch-note'
+    },
+    contentTitle: normalizeSketchText(selected.content_title || item.draft_title || item.source_title),
+    contentAngle: normalizeSketchText(selected.content_angle),
+    recommendedLayoutFlow: Array.isArray(selected.recommended_layout_flow)
+      ? selected.recommended_layout_flow.map(normalizeSketchText).filter(Boolean)
+      : cards.map((card) => card.layout),
+    coverImagePrompt: normalizeSketchText(selected.cover_image_prompt),
+    cards,
+    caption: captionWithoutInactiveCta(caption || `${item.draft_title || item.source_title}`),
+    hashtags: hashtags.length > 0 ? [...new Set(hashtags)] : ['#GrowthLine', '#브랜딩', '#작은사업홍보'],
+    source: {
+      title: item.source_title,
+      url: item.source_url
+    },
+    generation: {
+      mode: adaptation ? 'openai-sketch-channel-adaptation' : 'template-sketch-channel',
+      schema: 'instagram-sketch-card-news-v2'
+    }
+  };
+}
+
+/**
+ * Creates a mock GrowthLine sketch-template payload without calling OpenAI.
+ */
+export function createInstagramSketchCardNewsPayload({ brand, item, channel }) {
+  return applyInstagramSketchCardNewsAdaptation({
+    brand,
+    item,
+    channel,
+    adaptation: createDefaultSketchAdaptation({ brand, item })
+  });
+}
