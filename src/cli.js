@@ -344,26 +344,29 @@ async function runReviewDecision(action, argv) {
 
   const { approveContent, rejectContent } = await import('./repository.js');
   const { store } = await openAppDatabase();
-  const item = await store.getContentItem(contentId);
+  try {
+    const item = await store.getContentItem(contentId);
 
-  if (!item) {
-    throw new Error(`Content item not found: ${contentId}`);
+    if (!item) {
+      throw new Error(`Content item not found: ${contentId}`);
+    }
+
+    const updated =
+      action === 'approve'
+        ? await approveContent(store, item, { mode: 'manual-cli' })
+        : await rejectContent(store, item, argv.slice(1).join(' ') || 'rejected', { mode: 'manual-cli' });
+
+    printDatabaseInfo(store);
+    console.log(JSON.stringify({
+      id: updated.id,
+      sourceTitle: updated.source_title,
+      draftTitle: updated.draft_title,
+      status: updated.status,
+      summary: await store.summarize()
+    }, null, 2));
+  } finally {
+    await store.close();
   }
-
-  const updated =
-    action === 'approve'
-      ? await approveContent(store, item, { mode: 'manual-cli' })
-      : await rejectContent(store, item, argv.slice(1).join(' ') || 'rejected', { mode: 'manual-cli' });
-
-  printDatabaseInfo(store);
-  console.log(JSON.stringify({
-    id: updated.id,
-    sourceTitle: updated.source_title,
-    draftTitle: updated.draft_title,
-    status: updated.status,
-    summary: await store.summarize()
-  }, null, 2));
-  await store.close();
 }
 
 /**
@@ -1114,5 +1117,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(error.message);
-  process.exit(1);
+  process.exitCode = 1;
 });
