@@ -97,6 +97,8 @@ node --no-warnings=ExperimentalWarning --test
 
 `instagram preview-sketch`는 DB/API를 사용하지 않고 v2 스케치 노트 템플릿 샘플 PNG를 `artifacts/generated/instagram/preview_instagram_sketch_v2`에 생성합니다. `instagram render`는 `channel_outputs`의 Instagram payload를 읽고 `artifacts/generated/instagram/<content-id>`에 PNG 카드뉴스와 `manifest.json`을 생성합니다. v1은 1080x1080 5장, v2는 1080x1350 최대 8장입니다. `INSTAGRAM_COVER_IMAGE_ENABLED=true`이면 v2 Cover 배경 이미지를 OpenAI Image API로 생성한 뒤 HTML/CSS 렌더러가 문구를 올립니다. 이때 채널 생성 GPT는 승인된 전체 초안을 바탕으로 여우 전략가, 그래픽 노블 한 컷, 좌하단 제목 오버레이 여백, 이미지 내부 텍스트 금지 조건을 포함한 `cover_image_prompt`를 만듭니다. `INSTAGRAM_FINAL_CTA_IMAGE_PATH`가 설정되면 v2 마지막 카드는 GPT가 만든 Closing 문구 대신 지정한 정적 CTA 이미지로 렌더링됩니다. 렌더 결과물은 런타임 산출물이므로 Git에는 커밋하지 않습니다.
 
+승인 상태로 바꾸지 않고 실제 초안 1건의 v2 채널 생성과 커버 이미지 렌더링만 확인하려면 `scripts/preview-v2-cover-render.mjs <content-id>`를 실행합니다. 이 스크립트는 DB에서 콘텐츠를 읽기만 하고 `channel_outputs`, 상태값, Supabase Storage, Notion, Instagram에는 쓰지 않습니다. `--mock`은 GPT 채널 생성을 건너뛰고, `--no-cover-image`는 OpenAI Image API 호출을 건너뜁니다.
+
 `instagram upload`는 렌더된 PNG와 manifest를 Supabase Storage public bucket에 업로드하고, `channel_outputs.artifact_path`를 공개 manifest URL로 바꿉니다.
 
 `instagram publish --mock`은 Meta API 호출 없이 게시 상태 전이를 검증합니다. 실제 `instagram publish`는 `.env`의 `META_ACCESS_TOKEN`, `META_GRAPH_BASE_URL`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`를 사용해 Instagram Graph API로 게시합니다.
