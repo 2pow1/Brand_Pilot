@@ -9,6 +9,7 @@ import {
   buildInstagramSketchCardHtml,
   escapeHtml,
   prepareCoverImage,
+  resolveCoverImage,
   toCssImageUrl
 } from '../src/render/instagram-sketch.js';
 import { createInstagramSketchPreviewPayload } from '../src/render/instagram-preview.js';
@@ -122,6 +123,61 @@ test('converts local cover image paths to file URLs for sketch rendering', () =>
 
   assert.match(cssUrl, /^url\("file:\/\/\//);
   assert.match(cssUrl.replaceAll('\\', '/'), /artifacts\/generated\/cover\.png/);
+});
+
+test('embeds generated local cover images as data URLs for sketch rendering', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'brand-pilot-cover-'));
+  const imagePath = join(cwd, 'cover.png');
+  writeFileSync(imagePath, Buffer.from('png'));
+  const cssUrl = resolveCoverImage({
+    cwd,
+    payload: {
+      coverImagePath: imagePath
+    }
+  });
+
+  assert.match(cssUrl, /^url\("data:image\/png;base64,/);
+  assert.doesNotMatch(cssUrl, /file:\/\//);
+});
+
+test('writes cover image data directly into the sketch cover background rule', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'brand-pilot-cover-html-'));
+  const imagePath = join(cwd, 'cover.png');
+  writeFileSync(imagePath, Buffer.from('png'));
+  const html = buildInstagramSketchCardHtml({
+    cwd,
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      contentTitle: 'Card title',
+      coverImagePath: imagePath
+    },
+    card: {
+      index: 1,
+      page: '1/2',
+      layout: '01',
+      layout_name: 'Cover',
+      kicker: 'Brand Note',
+      title: 'Customers read signals first',
+      subtitle: 'A short subtitle'
+    },
+    total: 2
+  });
+
+  assert.match(html, /background-image: url\("data:image\/png;base64,/);
+  assert.doesNotMatch(html, /background-image: var\(--cover-image\)/);
+  assert.doesNotMatch(html, /--cover-image/);
 });
 
 test('generates a cover image when sketch cover images are enabled', async () => {
