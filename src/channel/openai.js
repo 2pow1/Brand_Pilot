@@ -39,7 +39,7 @@ export async function createOpenAiInstagramCardNewsPayload({
   }
 
   const spec = instagramTemplateSpec(channel);
-  const prompt = spec.prompt({ brand, item, channel });
+  const prompt = spec.prompt({ config, brand, item, channel });
   const response = await fetchImpl(`${config.openaiBaseUrl}/responses`, {
     method: 'POST',
     headers: {

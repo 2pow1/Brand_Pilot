@@ -32,7 +32,6 @@ export function buildInstagramChannelPrompt({ brand, item, channel }) {
       `CTA enabled: ${ctaEnabled ? 'true' : 'false'}`,
       `CTA label: ${ctaEnabled ? brand.cta?.label || '' : ''}`,
       `CTA URL: ${ctaEnabled ? brand.cta?.url || '' : ''}`,
-      '',
       'Channel:',
       `- ID: ${channel.id}`,
       `- Format: ${channel.format}`,
@@ -66,8 +65,9 @@ export function buildInstagramChannelPrompt({ brand, item, channel }) {
 /**
  * Builds the prompt for the GrowthLine sketch-note Instagram template.
  */
-export function buildInstagramSketchCardNewsPrompt({ brand, item, channel }) {
+export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, channel }) {
   const ctaEnabled = Boolean(brand.cta?.enabled && brand.cta?.url);
+  const staticFinalCtaEnabled = Boolean(config.instagramFinalCtaImagePath);
 
   return {
     system: [
@@ -161,6 +161,11 @@ export function buildInstagramSketchCardNewsPrompt({ brand, item, channel }) {
       'Approved master draft:',
       `- Title: ${item.draft_title}`,
       `- Body: ${item.draft_body}`,
+      '',
+      `Static final CTA image enabled: ${staticFinalCtaEnabled ? 'true' : 'false'}`,
+      staticFinalCtaEnabled
+        ? 'When static final CTA image is enabled, keep the normal 2 to 8 card flow. The final Closing card visual will be replaced by the static CTA image during rendering, so use Closing only as metadata.'
+        : 'When static final CTA image is disabled, return 2 to 8 cards and omit optional middle layouts that are not useful.',
       '',
       'Create Instagram sketch card-news content that matches the JSON schema. Include cover_image_prompt for the thumbnail/background image, but do not place image instructions inside card text.'
     ].join('\n')

@@ -96,6 +96,17 @@ test('loads Instagram template override from environment', () => {
   assert.equal(config.instagramTemplate, 'instagram-sketch-card-news-v2');
 });
 
+test('loads Instagram final CTA image path from environment', () => {
+  const config = loadConfig({
+    cwd: EMPTY_ENV_CWD,
+    env: {
+      INSTAGRAM_FINAL_CTA_IMAGE_PATH: 'assets/instagram/growthline-open-chat-cta.png'
+    }
+  });
+
+  assert.equal(config.instagramFinalCtaImagePath, 'assets/instagram/growthline-open-chat-cta.png');
+});
+
 test('applies Instagram template override to channel config', () => {
   const channels = applyChannelOverrides(
     [

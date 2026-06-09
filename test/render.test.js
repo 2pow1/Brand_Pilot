@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { buildInstagramRenderPaths } from '../src/render/instagram.js';
 import {
+  applyStaticFinalCtaCard,
   buildInstagramSketchCardHtml,
   escapeHtml,
   prepareCoverImage,
@@ -76,6 +80,38 @@ test('builds a deterministic sketch preview payload', () => {
   assert.equal(payload.cards[0].layout, '01');
   assert.equal(payload.cards.at(-1).layout, '09');
   assert.equal(payload.coverImagePrompt.includes('no readable text'), true);
+});
+
+test('renders the final sketch card as a static CTA image when configured', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'brand-pilot-render-'));
+  const imagePath = join(cwd, 'cta.png');
+  writeFileSync(imagePath, Buffer.from('png'));
+  const payload = applyStaticFinalCtaCard({
+    cwd,
+    payload: createInstagramSketchPreviewPayload({
+      brand: {
+        companyName: 'GrowthLine'
+      }
+    }),
+    config: {
+      instagramFinalCtaImagePath: imagePath
+    }
+  });
+  const lastCard = payload.cards.at(-1);
+  const html = buildInstagramSketchCardHtml({
+    cwd,
+    payload,
+    card: lastCard,
+    total: payload.cards.length
+  });
+
+  assert.equal(lastCard.staticImagePath, imagePath);
+  assert.equal(payload.cards.length, 8);
+  assert.equal(payload.cards[0].page, '1/8');
+  assert.equal(lastCard.page, '8/8');
+  assert.match(html, /static-image-slide/);
+  assert.match(html, /background-size: cover/);
+  assert.doesNotMatch(html, /Save this before/);
 });
 
 test('converts local cover image paths to file URLs for sketch rendering', () => {

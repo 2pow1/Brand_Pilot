@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { isAbsolute, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { extname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { generateOpenAiImage } from '../openai/image.js';
 
@@ -32,6 +32,23 @@ function text(value) {
 }
 
 /**
+ * Chooses a browser-supported MIME type for local static image embedding.
+ */
+function imageMimeType(path) {
+  const extension = extname(path).toLowerCase();
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
+  if (extension === '.webp') return 'image/webp';
+  return 'image/png';
+}
+
+/**
+ * Embeds a local image as a data URL so Playwright setContent can render it reliably.
+ */
+function localImageDataUrl(path) {
+  return `data:${imageMimeType(path)};base64,${readFileSync(path).toString('base64')}`;
+}
+
+/**
  * Converts a local or remote image reference into a CSS url() value.
  */
 export function toCssImageUrl({ cwd, value }) {
@@ -58,6 +75,46 @@ export function resolveCoverImage({ cwd, payload }) {
       payload.coverImage?.path ||
       ''
   });
+}
+
+/**
+ * Adds a static image renderer marker to the final CTA card when configured.
+ */
+export function applyStaticFinalCtaCard({ cwd, payload, config = {} }) {
+  const sourcePath = text(config.instagramFinalCtaImagePath);
+  if (!sourcePath) return payload;
+
+  const imagePath = isAbsolute(sourcePath) ? sourcePath : resolve(cwd, sourcePath);
+  if (!existsSync(imagePath)) {
+    throw new Error(`INSTAGRAM_FINAL_CTA_IMAGE_PATH does not exist: ${sourcePath}`);
+  }
+
+  const cards = Array.isArray(payload.cards) ? payload.cards : [];
+  if (cards.length === 0) return payload;
+
+  return {
+    ...payload,
+    finalCtaImage: {
+      path: imagePath,
+      source: sourcePath
+    },
+    cards: cards.map((card, index) =>
+      index === cards.length - 1
+        ? {
+            ...card,
+            index: index + 1,
+            page: `${index + 1}/${cards.length}`,
+            staticImagePath: imagePath,
+            staticImageSource: sourcePath,
+            staticImageDataUrl: localImageDataUrl(imagePath)
+          }
+        : {
+            ...card,
+            index: index + 1,
+            page: `${index + 1}/${cards.length}`
+          }
+    )
+  };
 }
 
 /**
@@ -250,15 +307,55 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
   const width = Number(payload.dimensions?.width || 1080);
   const height = Number(payload.dimensions?.height || 1350);
   const design = payload.design || {};
+  const staticImage = card.staticImageDataUrl || card.staticImagePath
+    ? toCssImageUrl({ cwd, value: card.staticImageDataUrl || card.staticImagePath })
+    : '';
   const coverImage = card.layout === '01' ? resolveCoverImage({ cwd, payload }) : '';
   const slideClass = [
     'slide',
     `layout-${escapeHtml(card.layout || 'unknown')}`,
     card.layout === '01' ? 'cover' : '',
+    staticImage ? 'static-image-slide' : '',
     coverImage ? 'has-cover-image' : ''
   ]
     .filter(Boolean)
     .join(' ');
+
+  if (staticImage) {
+    return `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=${width}, height=${height}">
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    width: ${width}px;
+    height: ${height}px;
+    margin: 0;
+    overflow: hidden;
+    background: ${design.background || '#f7f1e3'};
+  }
+
+  .static-image-slide {
+    width: ${width}px;
+    height: ${height}px;
+    background-image: ${staticImage};
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+</style>
+</head>
+<body>
+  <main class="${slideClass}" aria-label="${escapeHtml(card.layout_name || 'Static CTA')}"></main>
+</body>
+</html>`;
+  }
 
   return `<!doctype html>
 <html lang="ko">
@@ -603,7 +700,7 @@ export async function renderInstagramSketchCardNews({ cwd, contentItemId, payloa
   const outputDir = paths?.outputDir || resolve(cwd, 'artifacts/generated/instagram', contentItemId);
   mkdirSync(outputDir, { recursive: true });
 
-  const renderPayload = await prepareCoverImage({
+  const preparedPayload = await prepareCoverImage({
     config: {
       ...config,
       cwd
@@ -611,6 +708,11 @@ export async function renderInstagramSketchCardNews({ cwd, contentItemId, payloa
     outputDir,
     payload,
     fetchImpl
+  });
+  const renderPayload = applyStaticFinalCtaCard({
+    cwd,
+    payload: preparedPayload,
+    config
   });
   const cards = Array.isArray(renderPayload.cards) ? renderPayload.cards : [];
   if (cards.length === 0) {
@@ -659,7 +761,8 @@ export async function renderInstagramSketchCardNews({ cwd, contentItemId, payloa
     template: renderPayload.template,
     dimensions: renderPayload.dimensions,
     coverImagePrompt: renderPayload.coverImagePrompt,
-    coverImage: renderPayload.coverImage || null
+    coverImage: renderPayload.coverImage || null,
+    finalCtaImage: renderPayload.finalCtaImage || null
   };
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
 

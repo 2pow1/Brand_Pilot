@@ -93,6 +93,7 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
     openaiImageQuality: merged.OPENAI_IMAGE_QUALITY || DEFAULT_OPENAI_IMAGE_QUALITY,
     instagramCoverImageEnabled: envFlag(merged.INSTAGRAM_COVER_IMAGE_ENABLED, false),
     instagramTemplate: merged.INSTAGRAM_TEMPLATE || '',
+    instagramFinalCtaImagePath: merged.INSTAGRAM_FINAL_CTA_IMAGE_PATH || '',
     discordBotToken: merged.DISCORD_BOT_TOKEN || '',
     discordReviewChannelId: merged.DISCORD_REVIEW_CHANNEL_ID || '',
     discordBaseUrl: merged.DISCORD_BASE_URL || DEFAULT_DISCORD_BASE_URL,
