@@ -147,6 +147,11 @@ test('creates sketch-template Instagram payloads from OpenAI channel adaptation'
     fetchImpl: async (_url, init) => {
       const body = JSON.parse(init.body);
       assert.equal(body.text.format.name, 'brand_pilot_instagram_sketch_channel');
+      assert.match(body.input[0].content[0].text, /fox strategist/);
+      assert.match(body.input[0].content[0].text, /graphic-novel single panel/);
+      assert.match(body.input[0].content[0].text, /lower-left area/);
+      assert.match(body.input[0].content[0].text, /Absolutely no text inside the image/);
+      assert.match(body.input[1].content[0].text, /full approved master draft/);
       return Response.json({
         output_text: JSON.stringify(responsePayload)
       });

@@ -62,6 +62,21 @@ export function buildInstagramChannelPrompt({ brand, item, channel }) {
   };
 }
 
+const sketchCoverImagePromptGuidance = [
+  'Cover image prompt requirements:',
+  '- cover_image_prompt must be an image-generation prompt for a vertical 4:5 Instagram first-card background.',
+  "- Read the approved master draft as the full source and design a metaphorical scene that represents the draft's core message.",
+  '- The main character must be a fox strategist, not a cute pet: calm, editorial, and focused on organizing brand messages, customer questions, trust, and perception.',
+  '- The fox may use strategist objects such as glasses, jacket, knitwear, notebook, pen, workbench, cards, folders, or archive boxes.',
+  '- Style: graphic-novel single panel, clear situation, bold outlines, strong contrast, poster-like composition, warm but sharp editorial brand-insight mood.',
+  '- Avoid soft storybook sketch, childish cuteness, photorealism, 3D, anime, cyberpunk, and corporate stock illustration.',
+  '- Palette: ivory or cream background, black or charcoal, deep green, warm brown, with a very small lime GrowthLine accent.',
+  '- Composition: keep the lower-left area relatively simple and slightly dark for a large HTML title overlay; keep the upper-right area simple for a small brand-name overlay.',
+  '- Place the fox, face, and key objects in the center, right, or upper area so they do not collide with the lower-left title area.',
+  '- The lower-left area should not look empty, but it must stay simple enough for overlaid Korean title text to remain readable.',
+  '- Absolutely no text inside the image: no Korean, English, numbers, logos, watermarks, signs, speech bubbles, readable documents, UI screens, text charts, or typography.'
+].join('\n');
+
 /**
  * Builds the prompt for the GrowthLine sketch-note Instagram template.
  */
@@ -94,6 +109,8 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
       '- 첫 장 이미지 백그라운드 위에 올릴 텍스트용이다.',
       '- 콘텐츠 전체를 관통하는 강한 제목, 짧은 부제, 시리즈명을 작성한다.',
       '- 이미지는 직접 만들지 말고 cover_image_prompt에 이미지 생성 프롬프트만 작성한다.',
+      '',
+      sketchCoverImagePromptGuidance,
       '',
       'LAYOUT 02. Q&A',
       '- 독자가 실제로 궁금해할 질문이 있을 때 사용한다.',
@@ -167,7 +184,8 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
         ? 'When static final CTA image is enabled, keep the normal 2 to 8 card flow. The final Closing card visual will be replaced by the static CTA image during rendering, so use Closing only as metadata.'
         : 'When static final CTA image is disabled, return 2 to 8 cards and omit optional middle layouts that are not useful.',
       '',
-      'Create Instagram sketch card-news content that matches the JSON schema. Include cover_image_prompt for the thumbnail/background image, but do not place image instructions inside card text.'
+      'Create Instagram sketch card-news content that matches the JSON schema. Include cover_image_prompt for the thumbnail/background image, but do not place image instructions inside card text.',
+      'For cover_image_prompt, use the full approved master draft above as the source text and follow the fox-strategist cover image requirements from the system message.'
     ].join('\n')
   };
 }

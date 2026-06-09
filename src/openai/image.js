@@ -15,9 +15,12 @@ export function buildImagePrompt(prompt) {
     prompt,
     '',
     'Strict requirements:',
+    '- Vertical 4:5 Instagram first-card background image.',
     '- No readable text.',
-    '- No letters, words, logo, watermark, signature, UI, or QR code.',
-    '- Leave enough negative space for Korean headline text overlaid later.'
+    '- No Korean, English, letters, words, numbers, logo, watermark, signature, signs, speech bubbles, UI, QR code, charts with text, or typography.',
+    '- Keep the lower-left area relatively simple and slightly darker for Korean headline text overlaid later.',
+    '- Keep the upper-right area simple for a small brand-name overlay.',
+    '- Keep important faces, characters, and objects away from the lower-left title area.'
   ].join('\n');
 }
 

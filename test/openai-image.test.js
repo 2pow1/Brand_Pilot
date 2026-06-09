@@ -10,7 +10,10 @@ test('adds no-text constraints to image prompts', () => {
 
   assert.match(prompt, /Sketch-note background/);
   assert.match(prompt, /No readable text/);
+  assert.match(prompt, /No Korean, English/);
   assert.match(prompt, /Korean headline text/);
+  assert.match(prompt, /lower-left area/);
+  assert.match(prompt, /upper-right area/);
 });
 
 test('writes base64 OpenAI image output to disk', async () => {
