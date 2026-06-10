@@ -3,7 +3,8 @@ name: Brand Pilot Publish Pipeline
 on:
   workflow_dispatch:
   schedule:
-    - cron: '11 * * * *'
+    # 07:00-19:00 KST every 2 hours. GitHub cron runs in UTC.
+    - cron: '0 0,2,4,6,8,10,22 * * *'
 
 jobs:
   publish:

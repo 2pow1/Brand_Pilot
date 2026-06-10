@@ -3,7 +3,8 @@ name: Brand Pilot Collection Pipeline
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 */6 * * *'
+    # 06:00 and 18:00 KST. GitHub cron runs in UTC.
+    - cron: '0 9,21 * * *'
 
 jobs:
   pipeline:
