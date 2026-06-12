@@ -239,7 +239,7 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
         : 'When static final CTA image is disabled, return 2 to 8 cards and omit optional middle layouts that are not useful.',
       '',
       'Create Instagram sketch card-news content that matches the JSON schema. Include cover_image_prompt for the thumbnail/background image, but do not place image instructions inside card text.',
-      'For cover_image_prompt, use the full approved master draft above as the source text and follow the fox-strategist cover image requirements from the system message.'
+      
     ].join('\n')
   };
 }
