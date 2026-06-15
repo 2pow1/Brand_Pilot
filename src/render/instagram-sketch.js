@@ -35,6 +35,22 @@ const TITLE_FIT_LEVELS = new Set(['normal', 'tight', 'compressed']);
 const TITLE_FIELDS_BY_LAYOUT = Object.freeze({
   '02': 'question'
 });
+const CONTENT_FIT_LEVELS = new Set(['normal', 'tight', 'compressed']);
+const CONTENT_FIELDS_BY_LAYOUT = Object.freeze({
+  '02': ['answer'],
+  '03': ['problem', 'solution'],
+  '04': ['steps'],
+  '05': ['items'],
+  '06': ['before', 'after'],
+  '07': ['description'],
+  '08': ['items'],
+  '09': ['description', 'cta']
+});
+const CONTENT_FIT_RULES = Object.freeze({
+  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18 },
+  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17 },
+  default: { normal: 105, tight: 145, normalLines: 8, tightLines: 12, maxLineLength: 18 }
+});
 
 function visibleCharacterCount(value) {
   return Array.from(text(value).replace(/\s+/g, '')).length;
@@ -55,6 +71,73 @@ function inferTitleFitLevel(card) {
 function titleFitLevel(card) {
   const level = text(card.titleFit?.level);
   return TITLE_FIT_LEVELS.has(level) ? level : inferTitleFitLevel(card);
+}
+
+function textParts(value) {
+  if (!value) return [];
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(textParts);
+  if (typeof value === 'object') return Object.values(value).flatMap(textParts);
+  return [];
+}
+
+function inferContentFitLevel(card) {
+  const rule = CONTENT_FIT_RULES[card.layout] || CONTENT_FIT_RULES.default;
+  const fields = CONTENT_FIELDS_BY_LAYOUT[card.layout] || [];
+  const lines = fields
+    .flatMap((field) => textParts(card[field]))
+    .flatMap((value) => text(value).split(/\r?\n/))
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const length = visibleCharacterCount(lines.join('\n'));
+  const estimatedLineCount = lines.reduce(
+    (sum, line) => sum + Math.max(1, Math.ceil(visibleCharacterCount(line) / rule.maxLineLength)),
+    0
+  );
+  const maxLineLength = Math.max(0, ...lines.map(visibleCharacterCount));
+
+  if (
+    length > rule.tight ||
+    estimatedLineCount > rule.tightLines ||
+    maxLineLength > rule.maxLineLength + 8
+  ) {
+    return 'compressed';
+  }
+
+  if (
+    length > rule.normal ||
+    estimatedLineCount > rule.normalLines ||
+    maxLineLength > rule.maxLineLength
+  ) {
+    return 'tight';
+  }
+
+  return 'normal';
+}
+
+function contentFitLevel(card) {
+  const level = text(card.contentFit?.level);
+  return CONTENT_FIT_LEVELS.has(level) ? level : inferContentFitLevel(card);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripLeadingSectionLabel(value, labels) {
+  const normalized = text(value)
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n');
+  const choices = labels.map(text).filter(Boolean);
+  if (!normalized || choices.length === 0) return normalized;
+
+  const pattern = new RegExp(
+    `^(?:${choices.map(escapeRegExp).join('|')})(?:\\s*[:：\\-–—]\\s*|\\s*\\n+)`,
+    'i'
+  );
+
+  return normalized.replace(pattern, '').trim();
 }
 
 /**
@@ -239,16 +322,29 @@ function renderCardBody(card) {
   }
 
   if (card.layout === '03') {
+    const problem = stripLeadingSectionLabel(card.problem, [
+      card.problem_title,
+      'Problem',
+      '문제'
+    ]);
+    const solution = stripLeadingSectionLabel(card.solution, [
+      card.solution_title,
+      'Solution',
+      '해결',
+      '해결 방향',
+      '방향'
+    ]);
+
     return `
       <div class="stack">
         <h2>${multiline(card.title)}</h2>
         <div class="split-block">
           <p class="label">${multiline(card.problem_title || 'Problem')}</p>
-          <p>${multiline(card.problem)}</p>
+          <p>${multiline(problem)}</p>
         </div>
         <div class="split-block accent-block">
           <p class="label">${multiline(card.solution_title || 'Solution')}</p>
-          <p>${multiline(card.solution)}</p>
+          <p>${multiline(solution)}</p>
         </div>
       </div>
     `;
@@ -287,17 +383,20 @@ function renderCardBody(card) {
   }
 
   if (card.layout === '06') {
+    const before = stripLeadingSectionLabel(card.before, ['Before', '비포']);
+    const after = stripLeadingSectionLabel(card.after, ['After', '애프터']);
+
     return `
       <div class="stack">
         <h2>${multiline(card.title)}</h2>
         <div class="before-after">
           <section>
             <p class="label">Before</p>
-            <p>${multiline(card.before)}</p>
+            <p>${multiline(before)}</p>
           </section>
           <section class="after">
             <p class="label">After</p>
-            <p>${multiline(card.after)}</p>
+            <p>${multiline(after)}</p>
           </section>
         </div>
       </div>
@@ -355,6 +454,7 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     'slide',
     `layout-${escapeHtml(card.layout || 'unknown')}`,
     `title-fit-${titleFitLevel(card)}`,
+    `content-fit-${contentFitLevel(card)}`,
     card.layout === '01' ? 'cover' : '',
     staticImage ? 'static-image-slide' : '',
     coverImage ? 'has-cover-image' : ''
@@ -464,8 +564,8 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
 
   .slide.has-cover-image .cover-copy {
     position: relative;
-    margin-top: 520px;
-    padding: 36px 42px;
+    margin-top: 0;
+    padding: 30px 42px 36px;
     background: rgba(251, 246, 232, 0.91);
     border: 4px solid var(--border);
   }
@@ -494,6 +594,11 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     align-items: center;
   }
 
+  .slide.has-cover-image .content {
+    align-items: flex-end;
+    height: calc(100% - 240px);
+  }
+
   .layout-06 .content,
   .title-fit-tight .content,
   .title-fit-compressed .content {
@@ -503,6 +608,29 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
 
   .layout-06.title-fit-compressed .content {
     padding-top: 52px;
+  }
+
+  .layout-03.content-fit-tight .content,
+  .layout-06.content-fit-tight .content {
+    align-items: flex-start;
+    height: calc(100% - 176px);
+    padding-top: 48px;
+  }
+
+  .layout-03.content-fit-compressed .content,
+  .layout-06.content-fit-compressed .content {
+    align-items: flex-start;
+    height: calc(100% - 186px);
+    padding-top: 34px;
+  }
+
+  .layout-03.content-fit-compressed .content {
+    height: calc(100% - 214px);
+    padding-top: 62px;
+  }
+
+  .layout-06.content-fit-compressed .content {
+    padding-top: 64px;
   }
 
   .stack,
@@ -575,6 +703,24 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     line-height: 1.08;
   }
 
+  .content-fit-tight h2 {
+    margin-bottom: 30px;
+    font-size: 54px;
+    line-height: 1.08;
+  }
+
+  .content-fit-compressed h2 {
+    margin-bottom: 52px;
+    font-size: 46px;
+    line-height: 1.06;
+  }
+
+  .layout-03.content-fit-compressed h2 {
+    margin-bottom: 50px;
+    font-size: 42px;
+    line-height: 1.05;
+  }
+
   h3 {
     margin-bottom: 10px;
     font-size: 30px;
@@ -622,10 +768,43 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     margin-bottom: 30px;
   }
 
+  .layout-03.content-fit-tight .split-block {
+    padding: 26px 30px;
+    margin-bottom: 22px;
+  }
+
+  .layout-03.content-fit-compressed .split-block {
+    padding: 16px 22px;
+    margin-bottom: 14px;
+    box-shadow: 8px 8px 0 rgba(21, 21, 21, 0.1);
+  }
+
   .split-block .label,
   .before-after .label {
     margin-bottom: 16px;
     font-size: 22px;
+  }
+
+  .layout-03.content-fit-compressed .split-block .label,
+  .layout-06.content-fit-compressed .before-after .label {
+    margin-bottom: 10px;
+    font-size: 20px;
+  }
+
+  .layout-03.content-fit-compressed .split-block .label {
+    margin-bottom: 8px;
+    padding: 8px 15px 9px;
+    font-size: 18px;
+  }
+
+  .layout-03.content-fit-tight .split-block p:not(.label) {
+    font-size: 32px;
+    line-height: 1.38;
+  }
+
+  .layout-03.content-fit-compressed .split-block p:not(.label) {
+    font-size: 26px;
+    line-height: 1.24;
   }
 
   .accent-block {
@@ -704,6 +883,33 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     line-height: 1.42;
   }
 
+  .layout-06.content-fit-tight .before-after {
+    gap: 20px;
+  }
+
+  .layout-06.content-fit-tight .before-after section {
+    padding: 26px 30px;
+  }
+
+  .layout-06.content-fit-tight .before-after section > p:not(.label) {
+    font-size: 31px;
+    line-height: 1.36;
+  }
+
+  .layout-06.content-fit-compressed .before-after {
+    gap: 16px;
+  }
+
+  .layout-06.content-fit-compressed .before-after section {
+    padding: 20px 24px;
+    box-shadow: 8px 8px 0 rgba(21, 21, 21, 0.1);
+  }
+
+  .layout-06.content-fit-compressed .before-after section > p:not(.label) {
+    font-size: 28px;
+    line-height: 1.28;
+  }
+
   .one-message {
     padding: 56px;
     border: 5px solid var(--border);
@@ -750,6 +956,18 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     color: var(--muted);
     font-size: 22px;
     font-weight: 800;
+  }
+
+  .footer span:first-child {
+    max-width: calc(100% - 96px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .slide.has-cover-image .footer span {
+    padding: 5px 8px 6px;
+    background: rgba(251, 246, 232, 0.78);
   }
 </style>
 </head>

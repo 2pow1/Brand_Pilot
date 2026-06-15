@@ -99,9 +99,91 @@ test('infers compact rendering for long sketch card titles', () => {
   });
 
   assert.match(html, /layout-06/);
-  assert.match(html, /class="slide layout-06 title-fit-compressed"/);
+  assert.match(html, /class="slide layout-06 title-fit-compressed content-fit-(?:normal|tight|compressed)"/);
   assert.match(html, /\.title-fit-compressed h2/);
   assert.match(html, /font-size: 50px/);
+});
+
+test('compresses dense sketch body layouts and strips repeated section labels', () => {
+  const html = buildInstagramSketchCardHtml({
+    cwd: 'D:/workspace/Brand_Pilot',
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      contentTitle: 'Card title'
+    },
+    card: {
+      index: 3,
+      page: '3/7',
+      layout: '06',
+      layout_name: 'Before / After',
+      title: '같은 내용도\n읽히는 방식이 다릅니다',
+      before: 'Before\n\n“우리 서비스를 소개합니다”\n“성공 사례를 공개합니다”\n\n브랜드가 하고 싶은 말에서\n출발합니다.',
+      after:
+        'After\n\n“소규모 B2B 브랜드가\n제안서에서 자주 놓치는 3가지”\n\n“고객이 가격을 걱정하다가\n신뢰를 느낀 지점”\n\n고객의 고민에서\n출발합니다.'
+    },
+    total: 7
+  });
+
+  assert.match(html, /class="slide layout-06 title-fit-normal content-fit-compressed"/);
+  assert.match(html, /\.layout-06\.content-fit-compressed \.before-after section > p:not\(\.label\)/);
+  assert.match(html, /\.layout-06\.content-fit-compressed \.content {\n    padding-top: 64px;/);
+  assert.match(html, /\.content-fit-compressed h2 {\n    margin-bottom: 52px;/);
+  assert.match(html, /font-size: 28px/);
+  assert.doesNotMatch(html, /<p>Before<br>/);
+  assert.doesNotMatch(html, /<p>After<br>/);
+});
+
+test('compresses dense problem-solution sketch cards', () => {
+  const html = buildInstagramSketchCardHtml({
+    cwd: 'D:/workspace/Brand_Pilot',
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      contentTitle: 'Card title'
+    },
+    card: {
+      index: 2,
+      page: '2/7',
+      layout: '03',
+      layout_name: 'Problem / Solution',
+      title: '반응이 없는 이유는\n게시물 개수만의 문제가 아닙니다',
+      problem_title: '문제',
+      problem: '서비스 출시.\n행사 참여.\n제휴 소식.\n채용 공고.\n\n회사 이야기는 많은데\n고객이 궁금한 질문에는\n답이 없습니다.',
+      solution_title: '방향',
+      solution:
+        '이 브랜드가\n어떤 문제를 잘 해결하는지.\n\n대표와 팀이\n어떤 관점으로 일하는지.\n\n비슷한 고객에게\n어떤 도움을 줬는지 보여줘야 합니다.'
+    },
+    total: 7
+  });
+
+  assert.match(html, /class="slide layout-03 title-fit-normal content-fit-compressed"/);
+  assert.match(html, /\.layout-03\.content-fit-compressed \.split-block p:not\(\.label\)/);
+  assert.match(html, /\.layout-03\.content-fit-compressed \.content {\n    height: calc\(100% - 214px\);\n    padding-top: 62px;/);
+  assert.match(html, /\.layout-03\.content-fit-compressed h2 {\n    margin-bottom: 50px;/);
+  assert.match(html, /font-size: 26px/);
 });
 
 test('builds a deterministic sketch preview payload', () => {
@@ -213,6 +295,10 @@ test('writes cover image data directly into the sketch cover background rule', (
   });
 
   assert.match(html, /background-image: url\("data:image\/png;base64,/);
+  assert.match(html, /\.slide\.has-cover-image \.content {\n    align-items: flex-end;\n    height: calc\(100% - 240px\);/);
+  assert.match(html, /\.slide\.has-cover-image \.cover-copy {\n    position: relative;\n    margin-top: 0;/);
+  assert.match(html, /\.footer span:first-child {\n    max-width: calc\(100% - 96px\);/);
+  assert.match(html, /\.slide\.has-cover-image \.footer span {\n    padding: 5px 8px 6px;\n    background: rgba\(251, 246, 232, 0\.78\);/);
   assert.doesNotMatch(html, /background-image: var\(--cover-image\)/);
   assert.doesNotMatch(html, /--cover-image/);
 });

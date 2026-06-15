@@ -271,6 +271,116 @@ function classifySketchTitleFit({ layout, value }) {
   };
 }
 
+const SKETCH_CONTENT_FIELDS = Object.freeze({
+  '02': ['answer'],
+  '03': ['problem', 'solution'],
+  '04': ['steps'],
+  '05': ['items'],
+  '06': ['before', 'after'],
+  '07': ['description'],
+  '08': ['items'],
+  '09': ['description', 'cta']
+});
+
+const SKETCH_CONTENT_BUDGETS = Object.freeze({
+  '02': { normal: 90, tight: 125, normalLines: 5, tightLines: 7, maxLineLength: 18 },
+  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18 },
+  '04': { normal: 120, tight: 160, normalLines: 9, tightLines: 12, maxLineLength: 18 },
+  '05': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18 },
+  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17 },
+  '07': { normal: 90, tight: 125, normalLines: 4, tightLines: 6, maxLineLength: 20 },
+  '08': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18 },
+  '09': { normal: 100, tight: 140, normalLines: 6, tightLines: 8, maxLineLength: 18 }
+});
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripLeadingSectionLabel(value, labels) {
+  const normalized = normalizeSketchText(value);
+  const choices = labels.map(normalizeSketchText).filter(Boolean);
+  if (!normalized || choices.length === 0) return normalized;
+
+  const pattern = new RegExp(
+    `^(?:${choices.map(escapeRegExp).join('|')})(?:\\s*[:：\\-–—]\\s*|\\s*\\n+)`,
+    'i'
+  );
+
+  return normalized.replace(pattern, '').trim();
+}
+
+function textPartsFromSketchValue(value) {
+  if (!value) return [];
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(textPartsFromSketchValue);
+  if (typeof value === 'object') {
+    return Object.values(value).flatMap(textPartsFromSketchValue);
+  }
+  return [];
+}
+
+function analyzeSketchContent({ layout, card, budget }) {
+  const fields = SKETCH_CONTENT_FIELDS[layout] || [];
+  const parts = fields.flatMap((field) => textPartsFromSketchValue(card[field]));
+  const lines = parts
+    .flatMap((part) => normalizeSketchText(part).split('\n'))
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) {
+    return {
+      length: 0,
+      lineCount: 0,
+      estimatedLineCount: 0,
+      maxLineLength: 0,
+      fields
+    };
+  }
+
+  return {
+    length: countVisibleCharacters(parts.join('\n')),
+    lineCount: lines.length,
+    estimatedLineCount: lines.reduce(
+      (sum, line) => sum + Math.max(1, Math.ceil(countVisibleCharacters(line) / budget.maxLineLength)),
+      0
+    ),
+    maxLineLength: Math.max(...lines.map(countVisibleCharacters)),
+    fields
+  };
+}
+
+function classifySketchContentFit({ layout, card }) {
+  const budget = SKETCH_CONTENT_BUDGETS[layout] || {
+    normal: 110,
+    tight: 150,
+    normalLines: 8,
+    tightLines: 11,
+    maxLineLength: 18
+  };
+  const metrics = analyzeSketchContent({ layout, card, budget });
+  const level =
+    metrics.length > budget.tight ||
+    metrics.estimatedLineCount > budget.tightLines ||
+    metrics.maxLineLength > budget.maxLineLength + 8
+      ? 'compressed'
+      : metrics.length > budget.normal ||
+          metrics.estimatedLineCount > budget.normalLines ||
+          metrics.maxLineLength > budget.maxLineLength
+        ? 'tight'
+        : 'normal';
+
+  return {
+    level,
+    length: metrics.length,
+    lineCount: metrics.lineCount,
+    estimatedLineCount: metrics.estimatedLineCount,
+    maxLineLength: metrics.maxLineLength,
+    fields: metrics.fields,
+    budget
+  };
+}
+
 /**
  * Creates deterministic sketch-template content for mock generation and fallback tests.
  */
@@ -370,9 +480,33 @@ function normalizeSketchCard(card, index, total) {
     });
   }
 
+  if (layout === '03') {
+    normalized.problem = stripLeadingSectionLabel(normalized.problem, [
+      normalized.problem_title,
+      'Problem',
+      '문제'
+    ]);
+    normalized.solution = stripLeadingSectionLabel(normalized.solution, [
+      normalized.solution_title,
+      'Solution',
+      '해결',
+      '해결 방향',
+      '방향'
+    ]);
+  }
+
+  if (layout === '06') {
+    normalized.before = stripLeadingSectionLabel(normalized.before, ['Before', '비포']);
+    normalized.after = stripLeadingSectionLabel(normalized.after, ['After', '애프터']);
+  }
+
   const titleFit = classifySketchTitleFit({
     layout,
     value: normalized[titleField]
+  });
+  const contentFit = classifySketchContentFit({
+    layout,
+    card: normalized
   });
 
   return {
@@ -380,6 +514,9 @@ function normalizeSketchCard(card, index, total) {
     titleFit: {
       field: titleField,
       ...titleFit
+    },
+    contentFit: {
+      ...contentFit
     }
   };
 }

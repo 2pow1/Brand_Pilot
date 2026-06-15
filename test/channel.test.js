@@ -165,6 +165,58 @@ test('adds title fit metadata to long sketch-template card titles', () => {
   assert.equal(beforeAfterCard.titleFit.length > beforeAfterCard.titleFit.budget.normal, true);
 });
 
+test('adds content fit metadata and strips repeated section labels from dense sketch cards', () => {
+  const payload = applyInstagramSketchCardNewsAdaptation({
+    brand,
+    item,
+    channel: instagramSketchChannel,
+    adaptation: {
+      content_title: 'Dense body fit test',
+      content_angle: 'Check that dense comparison cards are marked before rendering.',
+      recommended_layout_flow: ['01', '06', '09'],
+      cover_image_prompt: 'Warm paper background with no readable text.',
+      caption: 'Caption',
+      hashtags: ['GrowthLine'],
+      cards: [
+        {
+          layout: '01',
+          layout_name: 'Cover',
+          usage_reason: 'Open the flow.',
+          series: 'GrowthLine Note',
+          kicker: 'BRAND NOTE',
+          title: '짧은 커버 제목',
+          subtitle: '짧은 부제'
+        },
+        {
+          layout: '06',
+          layout_name: 'Before / After',
+          usage_reason: 'Compare the change.',
+          title: '같은 내용도\n읽히는 방식이 다릅니다',
+          before: 'Before\n\n“우리 서비스를 소개합니다”\n“성공 사례를 공개합니다”\n\n브랜드가 하고 싶은 말에서\n출발합니다.',
+          after:
+            'After\n\n“소규모 B2B 브랜드가\n제안서에서 자주 놓치는 3가지”\n\n“고객이 가격을 걱정하다가\n신뢰를 느낀 지점”\n\n고객의 고민에서\n출발합니다.'
+        },
+        {
+          layout: '09',
+          layout_name: 'Closing',
+          usage_reason: 'Close the flow.',
+          title: '저장해두고 다시 보기',
+          description: '메시지 구조를 다시 점검합니다.',
+          cta: '다음 콘텐츠 전에 확인하세요.'
+        }
+      ]
+    }
+  });
+
+  const beforeAfterCard = payload.cards[1];
+
+  assert.doesNotMatch(beforeAfterCard.before, /^Before/i);
+  assert.doesNotMatch(beforeAfterCard.after, /^After/i);
+  assert.equal(beforeAfterCard.contentFit.level, 'compressed');
+  assert.equal(beforeAfterCard.contentFit.fields.includes('before'), true);
+  assert.equal(beforeAfterCard.contentFit.fields.includes('after'), true);
+});
+
 test('requires at least one enabled channel', async () => {
   await assert.rejects(
     () =>
