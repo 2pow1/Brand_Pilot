@@ -145,6 +145,43 @@ test('compresses dense sketch body layouts and strips repeated section labels', 
   assert.doesNotMatch(html, /<p>After<br>/);
 });
 
+test('keeps short line-heavy before-after cards in tight rendering', () => {
+  const html = buildInstagramSketchCardHtml({
+    cwd: 'D:/workspace/Brand_Pilot',
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      contentTitle: 'Card title'
+    },
+    card: {
+      index: 4,
+      page: '4/8',
+      layout: '06',
+      layout_name: 'Before / After',
+      title: '회사 게시판에서 벗어나기',
+      before: '출시 소식\n행사 참여\n제휴 발표\n우리 이야기만\n계속 쌓입니다.',
+      after: '고객의 걱정\n결정 기준\n해결 과정\n상대가 궁금한 쪽으로\n방향을 바꿉니다.'
+    },
+    total: 8
+  });
+
+  assert.match(html, /class="slide layout-06 title-fit-normal content-fit-tight"/);
+  assert.match(html, /\.layout-06\.content-fit-tight \.before-after section > p:not\(\.label\)/);
+  assert.match(html, /font-size: 31px/);
+  assert.doesNotMatch(html, /content-fit-compressed"/);
+});
+
 test('compresses dense problem-solution sketch cards', () => {
   const html = buildInstagramSketchCardHtml({
     cwd: 'D:/workspace/Brand_Pilot',

@@ -283,14 +283,14 @@ const SKETCH_CONTENT_FIELDS = Object.freeze({
 });
 
 const SKETCH_CONTENT_BUDGETS = Object.freeze({
-  '02': { normal: 90, tight: 125, normalLines: 5, tightLines: 7, maxLineLength: 18 },
-  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18 },
-  '04': { normal: 120, tight: 160, normalLines: 9, tightLines: 12, maxLineLength: 18 },
-  '05': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18 },
-  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17 },
-  '07': { normal: 90, tight: 125, normalLines: 4, tightLines: 6, maxLineLength: 20 },
-  '08': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18 },
-  '09': { normal: 100, tight: 140, normalLines: 6, tightLines: 8, maxLineLength: 18 }
+  '02': { normal: 90, tight: 125, normalLines: 5, tightLines: 7, maxLineLength: 18, compressedLineMinLength: 90 },
+  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 95 },
+  '04': { normal: 120, tight: 160, normalLines: 9, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 120 },
+  '05': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 110 },
+  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17, compressedLineMinLength: 95 },
+  '07': { normal: 90, tight: 125, normalLines: 4, tightLines: 6, maxLineLength: 20, compressedLineMinLength: 90 },
+  '08': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 110 },
+  '09': { normal: 100, tight: 140, normalLines: 6, tightLines: 8, maxLineLength: 18, compressedLineMinLength: 100 }
 });
 
 function escapeRegExp(value) {
@@ -356,12 +356,16 @@ function classifySketchContentFit({ layout, card }) {
     tight: 150,
     normalLines: 8,
     tightLines: 11,
-    maxLineLength: 18
+    maxLineLength: 18,
+    compressedLineMinLength: 110
   };
   const metrics = analyzeSketchContent({ layout, card, budget });
+  const lineOverflowIsDense =
+    metrics.estimatedLineCount > budget.tightLines &&
+    metrics.length > (budget.compressedLineMinLength ?? budget.normal);
   const level =
     metrics.length > budget.tight ||
-    metrics.estimatedLineCount > budget.tightLines ||
+    lineOverflowIsDense ||
     metrics.maxLineLength > budget.maxLineLength + 8
       ? 'compressed'
       : metrics.length > budget.normal ||

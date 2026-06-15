@@ -217,6 +217,55 @@ test('adds content fit metadata and strips repeated section labels from dense sk
   assert.equal(beforeAfterCard.contentFit.fields.includes('after'), true);
 });
 
+test('does not compress short before-after copy just because it has many lines', () => {
+  const payload = applyInstagramSketchCardNewsAdaptation({
+    brand,
+    item,
+    channel: instagramSketchChannel,
+    adaptation: {
+      content_title: 'Short line fit test',
+      content_angle: 'Check that short comparison copy is not over-compressed.',
+      recommended_layout_flow: ['01', '06', '09'],
+      cover_image_prompt: 'Warm paper background with no readable text.',
+      caption: 'Caption',
+      hashtags: ['GrowthLine'],
+      cards: [
+        {
+          layout: '01',
+          layout_name: 'Cover',
+          usage_reason: 'Open the flow.',
+          series: 'GrowthLine Note',
+          kicker: 'BRAND NOTE',
+          title: '짧은 비교 테스트',
+          subtitle: '짧은 줄이 많은 경우'
+        },
+        {
+          layout: '06',
+          layout_name: 'Before / After',
+          usage_reason: 'Compare the change.',
+          title: '회사 게시판에서 벗어나기',
+          before: '출시 소식\n행사 참여\n제휴 발표\n우리 이야기만\n계속 쌓입니다.',
+          after: '고객의 걱정\n결정 기준\n해결 과정\n상대가 궁금한 쪽으로\n방향을 바꿉니다.'
+        },
+        {
+          layout: '09',
+          layout_name: 'Closing',
+          usage_reason: 'Close the flow.',
+          title: '다시 점검하기',
+          description: '메시지 구조를 다시 확인합니다.',
+          cta: '다음 콘텐츠 전에 확인하세요.'
+        }
+      ]
+    }
+  });
+
+  const beforeAfterCard = payload.cards[1];
+
+  assert.equal(beforeAfterCard.contentFit.level, 'tight');
+  assert.equal(beforeAfterCard.contentFit.length < beforeAfterCard.contentFit.budget.normal, true);
+  assert.equal(beforeAfterCard.contentFit.estimatedLineCount > beforeAfterCard.contentFit.budget.tightLines, true);
+});
+
 test('requires at least one enabled channel', async () => {
   await assert.rejects(
     () =>

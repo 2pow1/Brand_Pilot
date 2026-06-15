@@ -47,9 +47,9 @@ const CONTENT_FIELDS_BY_LAYOUT = Object.freeze({
   '09': ['description', 'cta']
 });
 const CONTENT_FIT_RULES = Object.freeze({
-  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18 },
-  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17 },
-  default: { normal: 105, tight: 145, normalLines: 8, tightLines: 12, maxLineLength: 18 }
+  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 95 },
+  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17, compressedLineMinLength: 95 },
+  default: { normal: 105, tight: 145, normalLines: 8, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 105 }
 });
 
 function visibleCharacterCount(value) {
@@ -95,10 +95,13 @@ function inferContentFitLevel(card) {
     0
   );
   const maxLineLength = Math.max(0, ...lines.map(visibleCharacterCount));
+  const lineOverflowIsDense =
+    estimatedLineCount > rule.tightLines &&
+    length > (rule.compressedLineMinLength ?? rule.normal);
 
   if (
     length > rule.tight ||
-    estimatedLineCount > rule.tightLines ||
+    lineOverflowIsDense ||
     maxLineLength > rule.maxLineLength + 8
   ) {
     return 'compressed';
