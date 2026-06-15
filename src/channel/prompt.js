@@ -131,6 +131,50 @@ const sketchCoverImagePromptGuidance = [
   '- 이미지 생성 API에 바로 보낼 수 있는 하나의 구체적인 이미지 프롬프트를 작성한다.'
 ].join('\n');
 
+const sketchTextFitGuidance = [
+  'Text fit rules for the 1080x1350 sketch template:',
+  '- Treat these limits as rendering budgets, not writing suggestions.',
+  '- Count Korean syllables, English letters, and numbers as visible characters. Ignore spaces and line breaks when estimating length.',
+  '- Prefer 2 short title lines over 1 long title line. Do not create 4-line titles.',
+  '- If a card needs more detail than the budget allows, shorten the copy or split the idea into another useful card.',
+  '- Do not repeat section labels inside body text. The label fields already render labels such as Problem, Solution, Before, and After.',
+  '- Keep body copy as short lines that can be rendered directly with the line breaks you return.',
+  '',
+  'Layout 01 Cover:',
+  '- kicker: up to 18 visible characters.',
+  '- title: up to 3 lines, about 30 visible characters total, and no line longer than 13 visible characters.',
+  '- subtitle: up to 3 short lines, about 36 visible characters total.',
+  '',
+  'Layout 02 Q&A:',
+  '- question: up to 2 lines and about 28 visible characters total.',
+  '- answer: 3 to 5 short lines, about 90 visible characters total.',
+  '',
+  'Layout 03 Problem / Solution:',
+  '- title: up to 2 lines and about 26 visible characters total.',
+  '- problem: 3 to 6 short lines, about 55 visible characters total.',
+  '- solution: 3 to 6 short lines, about 65 visible characters total.',
+  '- Use compact contrast. Do not write paragraph-style explanations.',
+  '',
+  'Layout 04 Customer Flow:',
+  '- title: up to 2 lines and about 26 visible characters total.',
+  '- each step title: up to 10 visible characters.',
+  '- each step description: 1 to 2 short lines.',
+  '',
+  'Layout 05 Checklist and Layout 08 Summary:',
+  '- title: up to 2 lines and about 24 visible characters total.',
+  '- each item: 1 to 2 short lines, about 24 visible characters total.',
+  '',
+  'Layout 06 Before / After:',
+  '- title: up to 2 lines and about 24 visible characters total.',
+  '- before: 3 to 5 short lines, about 55 visible characters total.',
+  '- after: 3 to 6 short lines, about 65 visible characters total.',
+  '- Prefer contrast pairs over dense explanation.',
+  '',
+  'Layout 07 One Message and Layout 09 Closing:',
+  '- title: up to 2 lines and about 30 visible characters total.',
+  '- description or cta: 2 to 4 short lines.'
+].join('\n');
+
 /**
  * Builds the prompt for the GrowthLine sketch-note Instagram template.
  */
@@ -165,6 +209,8 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
       '- 이미지는 직접 만들지 말고 cover_image_prompt에 이미지 생성 프롬프트만 작성한다.',
       '',
       sketchCoverImagePromptGuidance,
+      '',
+      sketchTextFitGuidance,
       '',
       'LAYOUT 02. Q&A',
       '- 독자가 실제로 궁금해할 질문이 있을 때 사용한다.',
@@ -239,7 +285,7 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
         : 'When static final CTA image is disabled, return 2 to 8 cards and omit optional middle layouts that are not useful.',
       '',
       'Create Instagram sketch card-news content that matches the JSON schema. Include cover_image_prompt for the thumbnail/background image, but do not place image instructions inside card text.',
-      
+      'Before returning JSON, apply the text fit rules from the system prompt. If any card exceeds the budget, shorten it or split the idea into another useful card.'
     ].join('\n')
   };
 }
