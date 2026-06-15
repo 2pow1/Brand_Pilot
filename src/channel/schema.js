@@ -67,6 +67,26 @@ const textField = {
   type: 'string'
 };
 
+const coverTitleField = {
+  type: 'string',
+  maxLength: 42
+};
+
+const cardTitleField = {
+  type: 'string',
+  maxLength: 36
+};
+
+const compactTitleField = {
+  type: 'string',
+  maxLength: 32
+};
+
+const emphasisTitleField = {
+  type: 'string',
+  maxLength: 44
+};
+
 const stepSchema = {
   type: 'object',
   additionalProperties: false,
@@ -136,7 +156,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               layout_name: { type: 'string', enum: ['Cover'] },
               series: textField,
               kicker: textField,
-              title: textField,
+              title: coverTitleField,
               subtitle: textField
             }
           },
@@ -149,7 +169,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               layout: { type: 'string', enum: ['02'] },
               layout_name: { type: 'string', enum: ['Q&A'] },
               question_label: textField,
-              question: textField,
+              question: cardTitleField,
               answer_label: textField,
               answer: textField
             }
@@ -162,7 +182,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['03'] },
               layout_name: { type: 'string', enum: ['Problem / Solution'] },
-              title: textField,
+              title: cardTitleField,
               problem_title: textField,
               problem: textField,
               solution_title: textField,
@@ -177,7 +197,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['04'] },
               layout_name: { type: 'string', enum: ['Customer Flow'] },
-              title: textField,
+              title: cardTitleField,
               steps: {
                 type: 'array',
                 minItems: 3,
@@ -194,7 +214,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['05'] },
               layout_name: { type: 'string', enum: ['Checklist'] },
-              title: textField,
+              title: compactTitleField,
               items: {
                 type: 'array',
                 minItems: 4,
@@ -211,7 +231,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['06'] },
               layout_name: { type: 'string', enum: ['Before / After'] },
-              title: textField,
+              title: compactTitleField,
               before: textField,
               after: textField
             }
@@ -224,7 +244,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['07'] },
               layout_name: { type: 'string', enum: ['One Message'] },
-              title: textField,
+              title: emphasisTitleField,
               description: textField
             }
           },
@@ -236,7 +256,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['08'] },
               layout_name: { type: 'string', enum: ['Summary'] },
-              title: textField,
+              title: compactTitleField,
               items: {
                 type: 'array',
                 minItems: 4,
@@ -253,7 +273,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
               ...layoutBase,
               layout: { type: 'string', enum: ['09'] },
               layout_name: { type: 'string', enum: ['Closing'] },
-              title: textField,
+              title: emphasisTitleField,
               description: textField,
               cta: textField
             }

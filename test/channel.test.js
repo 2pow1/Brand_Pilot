@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { generateChannelOutputs } from '../src/channel/index.js';
-import { createInstagramCardNewsPayload } from '../src/channel/instagram.js';
+import { applyInstagramSketchCardNewsAdaptation, createInstagramCardNewsPayload } from '../src/channel/instagram.js';
 
 const brand = {
   companyName: 'GrowthLine',
@@ -114,6 +114,55 @@ test('generates sketch-template Instagram payloads when v2 template is configure
   assert.ok(payload.cards.length <= 8);
   assert.equal(payload.coverImagePrompt.length > 0, true);
   assert.equal(payload.generation.schema, 'instagram-sketch-card-news-v2');
+});
+
+test('adds title fit metadata to long sketch-template card titles', () => {
+  const payload = applyInstagramSketchCardNewsAdaptation({
+    brand,
+    item,
+    channel: instagramSketchChannel,
+    adaptation: {
+      content_title: 'Long title fit test',
+      content_angle: 'Check that long card titles are marked before rendering.',
+      recommended_layout_flow: ['01', '06', '09'],
+      cover_image_prompt: 'Warm paper background with no readable text.',
+      caption: 'Caption',
+      hashtags: ['GrowthLine'],
+      cards: [
+        {
+          layout: '01',
+          layout_name: 'Cover',
+          usage_reason: 'Open the flow.',
+          series: 'GrowthLine Note',
+          kicker: 'BRAND NOTE',
+          title: '짧은 커버 제목',
+          subtitle: '짧은 부제'
+        },
+        {
+          layout: '06',
+          layout_name: 'Before / After',
+          usage_reason: 'Compare the change.',
+          title: '어째서 가격 표현이 고객의 신뢰를 잃히는 이유를 계속 만듭니다',
+          before: '서비스를 소개합니다.',
+          after: '고객이 신뢰를 느끼는 지점을 먼저 보여줍니다.'
+        },
+        {
+          layout: '09',
+          layout_name: 'Closing',
+          usage_reason: 'Close the flow.',
+          title: '저장해두고 다시 보기',
+          description: '메시지 구조를 다시 점검합니다.',
+          cta: '다음 콘텐츠 전에 확인하세요.'
+        }
+      ]
+    }
+  });
+
+  const beforeAfterCard = payload.cards[1];
+
+  assert.equal(beforeAfterCard.titleFit.field, 'title');
+  assert.equal(beforeAfterCard.titleFit.level, 'compressed');
+  assert.equal(beforeAfterCard.titleFit.length > beforeAfterCard.titleFit.budget.normal, true);
 });
 
 test('requires at least one enabled channel', async () => {

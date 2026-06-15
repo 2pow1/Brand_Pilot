@@ -217,6 +217,60 @@ function normalizeSketchText(value) {
     .trim();
 }
 
+const SKETCH_TITLE_FIELDS = Object.freeze({
+  '02': 'question'
+});
+
+const SKETCH_TITLE_BUDGETS = Object.freeze({
+  '01': { normal: 28, tight: 38, maxLines: 2, maxLineLength: 16 },
+  '02': { normal: 26, tight: 36, maxLines: 2, maxLineLength: 16 },
+  '03': { normal: 26, tight: 36, maxLines: 2, maxLineLength: 16 },
+  '04': { normal: 26, tight: 36, maxLines: 2, maxLineLength: 16 },
+  '05': { normal: 24, tight: 34, maxLines: 2, maxLineLength: 15 },
+  '06': { normal: 24, tight: 32, maxLines: 2, maxLineLength: 14 },
+  '07': { normal: 30, tight: 42, maxLines: 2, maxLineLength: 17 },
+  '08': { normal: 24, tight: 34, maxLines: 2, maxLineLength: 15 },
+  '09': { normal: 28, tight: 40, maxLines: 2, maxLineLength: 16 }
+});
+
+function countVisibleCharacters(value) {
+  return Array.from(normalizeSketchText(value).replace(/\s+/g, '')).length;
+}
+
+function analyzeSketchTitle(value) {
+  const lines = normalizeSketchText(value).split('\n').filter(Boolean);
+  const measuredLines = lines.length > 0 ? lines : [''];
+
+  return {
+    length: countVisibleCharacters(value),
+    lineCount: measuredLines.length,
+    maxLineLength: Math.max(...measuredLines.map(countVisibleCharacters))
+  };
+}
+
+function classifySketchTitleFit({ layout, value }) {
+  const budget = SKETCH_TITLE_BUDGETS[layout] || { normal: 26, tight: 36, maxLines: 2, maxLineLength: 16 };
+  const metrics = analyzeSketchTitle(value);
+  const level =
+    metrics.length > budget.tight ||
+    metrics.maxLineLength > budget.maxLineLength + 6 ||
+    metrics.lineCount > budget.maxLines + 1
+      ? 'compressed'
+      : metrics.length > budget.normal ||
+          metrics.maxLineLength > budget.maxLineLength ||
+          metrics.lineCount > budget.maxLines
+        ? 'tight'
+        : 'normal';
+
+  return {
+    level,
+    length: metrics.length,
+    lineCount: metrics.lineCount,
+    maxLineLength: metrics.maxLineLength,
+    budget
+  };
+}
+
 /**
  * Creates deterministic sketch-template content for mock generation and fallback tests.
  */
@@ -281,12 +335,15 @@ function createDefaultSketchAdaptation({ brand, item }) {
  * Normalizes layout-specific card fields without losing the selected layout shape.
  */
 function normalizeSketchCard(card, index, total) {
+  const layout = normalizeSketchText(card.layout);
+  const layoutName = normalizeSketchText(card.layout_name);
+  const titleField = SKETCH_TITLE_FIELDS[layout] || 'title';
   const normalized = {
     index,
     page: `${index}/${total}`,
     ...card,
-    layout: normalizeSketchText(card.layout),
-    layout_name: normalizeSketchText(card.layout_name),
+    layout,
+    layout_name: layoutName,
     usage_reason: normalizeSketchText(card.usage_reason)
   };
 
@@ -313,7 +370,18 @@ function normalizeSketchCard(card, index, total) {
     });
   }
 
-  return normalized;
+  const titleFit = classifySketchTitleFit({
+    layout,
+    value: normalized[titleField]
+  });
+
+  return {
+    ...normalized,
+    titleFit: {
+      field: titleField,
+      ...titleFit
+    }
+  };
 }
 
 /**

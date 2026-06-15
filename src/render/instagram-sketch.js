@@ -31,6 +31,32 @@ function text(value) {
   return String(value ?? '').trim();
 }
 
+const TITLE_FIT_LEVELS = new Set(['normal', 'tight', 'compressed']);
+const TITLE_FIELDS_BY_LAYOUT = Object.freeze({
+  '02': 'question'
+});
+
+function visibleCharacterCount(value) {
+  return Array.from(text(value).replace(/\s+/g, '')).length;
+}
+
+function inferTitleFitLevel(card) {
+  const field = TITLE_FIELDS_BY_LAYOUT[card.layout] || 'title';
+  const title = text(card[field]);
+  const lineCount = title ? title.split(/\r?\n/).filter(Boolean).length : 0;
+  const length = visibleCharacterCount(title);
+  const maxLineLength = Math.max(0, ...title.split(/\r?\n/).map(visibleCharacterCount));
+
+  if (length > 36 || maxLineLength > 22 || lineCount > 3) return 'compressed';
+  if (length > 26 || maxLineLength > 16 || lineCount > 2) return 'tight';
+  return 'normal';
+}
+
+function titleFitLevel(card) {
+  const level = text(card.titleFit?.level);
+  return TITLE_FIT_LEVELS.has(level) ? level : inferTitleFitLevel(card);
+}
+
 /**
  * Chooses a browser-supported MIME type for local static image embedding.
  */
@@ -328,6 +354,7 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
   const slideClass = [
     'slide',
     `layout-${escapeHtml(card.layout || 'unknown')}`,
+    `title-fit-${titleFitLevel(card)}`,
     card.layout === '01' ? 'cover' : '',
     staticImage ? 'static-image-slide' : '',
     coverImage ? 'has-cover-image' : ''
@@ -467,6 +494,17 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     align-items: center;
   }
 
+  .layout-06 .content,
+  .title-fit-tight .content,
+  .title-fit-compressed .content {
+    align-items: flex-start;
+    padding-top: 72px;
+  }
+
+  .layout-06.title-fit-compressed .content {
+    padding-top: 52px;
+  }
+
   .stack,
   .cover-copy,
   .closing,
@@ -513,6 +551,28 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     line-height: 1.14;
     font-weight: 900;
     word-break: keep-all;
+  }
+
+  .title-fit-tight h1 {
+    font-size: 72px;
+    line-height: 1.08;
+  }
+
+  .title-fit-compressed h1 {
+    font-size: 64px;
+    line-height: 1.06;
+  }
+
+  .title-fit-tight h2 {
+    margin-bottom: 36px;
+    font-size: 58px;
+    line-height: 1.1;
+  }
+
+  .title-fit-compressed h2 {
+    margin-bottom: 28px;
+    font-size: 50px;
+    line-height: 1.08;
   }
 
   h3 {
@@ -621,6 +681,27 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
 
   .before-after .after {
     background: rgba(201, 242, 77, 0.28);
+  }
+
+  .layout-06.title-fit-tight .before-after {
+    gap: 24px;
+  }
+
+  .layout-06.title-fit-tight .before-after section {
+    padding: 30px 34px;
+  }
+
+  .layout-06.title-fit-compressed .before-after {
+    gap: 22px;
+  }
+
+  .layout-06.title-fit-compressed .before-after section {
+    padding: 26px 30px;
+  }
+
+  .layout-06.title-fit-compressed .before-after section > p:not(.label) {
+    font-size: 32px;
+    line-height: 1.42;
   }
 
   .one-message {

@@ -67,6 +67,43 @@ test('builds sketch template HTML from a v2 cover card', () => {
   assert.doesNotMatch(html, /<script>/);
 });
 
+test('infers compact rendering for long sketch card titles', () => {
+  const html = buildInstagramSketchCardHtml({
+    cwd: 'D:/workspace/Brand_Pilot',
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      contentTitle: 'Card title'
+    },
+    card: {
+      index: 4,
+      page: '4/7',
+      layout: '06',
+      layout_name: 'Before / After',
+      title: '어째서 가격 표현이 고객의 신뢰를 잃히는 이유를 계속 만듭니다',
+      before: '서비스를 소개합니다.\n성공 사례를 공개합니다.\n신규 프로그램을 출시했습니다.',
+      after: '고객이 신뢰를 느끼는 지점을 먼저 보여줍니다.\n비교 기준을 더 선명하게 만듭니다.'
+    },
+    total: 7
+  });
+
+  assert.match(html, /layout-06/);
+  assert.match(html, /class="slide layout-06 title-fit-compressed"/);
+  assert.match(html, /\.title-fit-compressed h2/);
+  assert.match(html, /font-size: 50px/);
+});
+
 test('builds a deterministic sketch preview payload', () => {
   const payload = createInstagramSketchPreviewPayload({
     brand: {
