@@ -212,7 +212,7 @@ test('adds content fit metadata and strips repeated section labels from dense sk
 
   assert.doesNotMatch(beforeAfterCard.before, /^Before/i);
   assert.doesNotMatch(beforeAfterCard.after, /^After/i);
-  assert.equal(beforeAfterCard.contentFit.level, 'compressed');
+  assert.equal(beforeAfterCard.contentFit.level, 'tight');
   assert.equal(beforeAfterCard.contentFit.fields.includes('before'), true);
   assert.equal(beforeAfterCard.contentFit.fields.includes('after'), true);
 });
@@ -263,7 +263,93 @@ test('does not compress short before-after copy just because it has many lines',
 
   assert.equal(beforeAfterCard.contentFit.level, 'tight');
   assert.equal(beforeAfterCard.contentFit.length < beforeAfterCard.contentFit.budget.normal, true);
-  assert.equal(beforeAfterCard.contentFit.estimatedLineCount > beforeAfterCard.contentFit.budget.tightLines, true);
+  assert.equal(beforeAfterCard.contentFit.maxLineLength > beforeAfterCard.contentFit.budget.maxLineLength, true);
+});
+
+test('joins short sketch body lines when they fit naturally', () => {
+  const payload = applyInstagramSketchCardNewsAdaptation({
+    brand,
+    item,
+    channel: instagramSketchChannel,
+    adaptation: {
+      content_title: 'Short body line join test',
+      content_angle: 'Check that short body copy is not over-broken.',
+      recommended_layout_flow: ['01', '03', '04', '05', '06', '09'],
+      cover_image_prompt: 'Warm paper background with no readable text.',
+      caption: 'Caption',
+      hashtags: ['GrowthLine'],
+      cards: [
+        {
+          layout: '01',
+          layout_name: 'Cover',
+          usage_reason: 'Open the flow.',
+          series: 'GrowthLine Note',
+          kicker: 'BRAND NOTE',
+          title: '본문 줄 확인',
+          subtitle: '짧은 줄을 합칩니다'
+        },
+        {
+          layout: '03',
+          layout_name: 'Problem / Solution',
+          usage_reason: 'Compare the change.',
+          title: '반응 없는 이유',
+          problem_title: 'Problem',
+          problem: '소식은 많지만\n고객 질문에는\n답이 없습니다.',
+          solution_title: 'Solution',
+          solution: '누구의 어떤 문제를\n반복해서 풀어왔는지\n보여줘야 합니다.'
+        },
+        {
+          layout: '04',
+          layout_name: 'Customer Flow',
+          usage_reason: 'Show the flow.',
+          title: '신뢰 흐름',
+          steps: [
+            { title: '상황 포착', description: '고객이 이미 겪는\n문제에서 시작' },
+            { title: '관점 제시', description: '우리는 어떻게 보는지\n짧게 설명' },
+            { title: '단서 축적', description: '사례와 과정을\n반복해서 남김' }
+          ]
+        },
+        {
+          layout: '05',
+          layout_name: 'Checklist',
+          usage_reason: 'Check the message.',
+          title: '먼저 볼 것',
+          items: [
+            '프로필과 페이지가\n같은 말을 하는가',
+            '한 문장으로\n대상이 보이는가',
+            '고객 상황에서\n글이 시작되는가',
+            '성과보다 과정과\n기준을 보여주는가'
+          ]
+        },
+        {
+          layout: '06',
+          layout_name: 'Before / After',
+          usage_reason: 'Compare before and after.',
+          title: '회사 소식만 올릴 때',
+          before: '출시 소식\n행사 참여\n제휴 뉴스\n채용 공고만\n쌓입니다.',
+          after: '고객의 고민\n대표의 관점\n해결 과정\n자주 받는 질문이\n쌓입니다.'
+        },
+        {
+          layout: '09',
+          layout_name: 'Closing',
+          usage_reason: 'Close the flow.',
+          title: '다시 점검하기',
+          description: '메시지 구조를 다시 확인합니다.',
+          cta: '다음 콘텐츠 전에 확인하세요.'
+        }
+      ]
+    }
+  });
+
+  const problemCard = payload.cards[1];
+  const flowCard = payload.cards[2];
+  const checklistCard = payload.cards[3];
+  const beforeAfterCard = payload.cards[4];
+
+  assert.equal(problemCard.problem, '소식은 많지만 고객 질문에는\n답이 없습니다.');
+  assert.equal(flowCard.steps[0].description, '고객이 이미 겪는 문제에서 시작');
+  assert.equal(checklistCard.items[0], '프로필과 페이지가 같은 말을 하는가');
+  assert.equal(beforeAfterCard.before, '출시 소식 행사 참여 제휴 뉴스 채용 공고만\n쌓입니다.');
 });
 
 test('requires at least one enabled channel', async () => {

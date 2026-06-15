@@ -217,6 +217,39 @@ function normalizeSketchText(value) {
     .trim();
 }
 
+function visibleLength(value) {
+  return Array.from(String(value ?? '').replace(/\s+/g, '')).length;
+}
+
+function joinShortBodyLines(value, maxLineLength = 18) {
+  const normalized = normalizeSketchText(value);
+  if (!normalized) return normalized;
+
+  return normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      const lines = paragraph
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const joined = [];
+
+      for (const line of lines) {
+        const previous = joined.at(-1);
+        const combined = previous ? `${previous} ${line}` : line;
+        if (previous && visibleLength(combined) <= maxLineLength) {
+          joined[joined.length - 1] = combined;
+        } else {
+          joined.push(line);
+        }
+      }
+
+      return joined.join('\n');
+    })
+    .join('\n\n')
+    .trim();
+}
+
 const SKETCH_TITLE_FIELDS = Object.freeze({
   '02': 'question'
 });
@@ -234,7 +267,7 @@ const SKETCH_TITLE_BUDGETS = Object.freeze({
 });
 
 function countVisibleCharacters(value) {
-  return Array.from(normalizeSketchText(value).replace(/\s+/g, '')).length;
+  return visibleLength(normalizeSketchText(value));
 }
 
 function analyzeSketchTitle(value) {
@@ -470,16 +503,16 @@ function normalizeSketchCard(card, index, total) {
   if (Array.isArray(card.steps)) {
     normalized.steps = card.steps.map((step) => ({
       title: normalizeSketchText(step.title),
-      description: normalizeSketchText(step.description)
+      description: joinShortBodyLines(step.description)
     }));
   }
 
   if (Array.isArray(card.items)) {
     normalized.items = card.items.map((item) => {
-      if (typeof item === 'string') return normalizeSketchText(item);
+      if (typeof item === 'string') return joinShortBodyLines(item);
       return {
         number: normalizeSketchText(item.number),
-        text: normalizeSketchText(item.text)
+        text: joinShortBodyLines(item.text)
       };
     });
   }
@@ -502,6 +535,29 @@ function normalizeSketchCard(card, index, total) {
   if (layout === '06') {
     normalized.before = stripLeadingSectionLabel(normalized.before, ['Before', '비포']);
     normalized.after = stripLeadingSectionLabel(normalized.after, ['After', '애프터']);
+  }
+
+  if (layout === '02') {
+    normalized.answer = joinShortBodyLines(normalized.answer, 22);
+  }
+
+  if (layout === '03') {
+    normalized.problem = joinShortBodyLines(normalized.problem);
+    normalized.solution = joinShortBodyLines(normalized.solution);
+  }
+
+  if (layout === '06') {
+    normalized.before = joinShortBodyLines(normalized.before);
+    normalized.after = joinShortBodyLines(normalized.after);
+  }
+
+  if (layout === '07') {
+    normalized.description = joinShortBodyLines(normalized.description, 22);
+  }
+
+  if (layout === '09') {
+    normalized.description = joinShortBodyLines(normalized.description, 22);
+    normalized.cta = joinShortBodyLines(normalized.cta, 22);
   }
 
   const titleFit = classifySketchTitleFit({

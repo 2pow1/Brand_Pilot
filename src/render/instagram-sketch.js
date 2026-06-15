@@ -31,6 +31,42 @@ function text(value) {
   return String(value ?? '').trim();
 }
 
+function inlineVisibleLength(value) {
+  return Array.from(String(value ?? '').replace(/\s+/g, '')).length;
+}
+
+function joinShortBodyLines(value, maxLineLength = 18) {
+  const normalized = text(value)
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n');
+  if (!normalized) return normalized;
+
+  return normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      const lines = paragraph
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const joined = [];
+
+      for (const line of lines) {
+        const previous = joined.at(-1);
+        const combined = previous ? `${previous} ${line}` : line;
+        if (previous && inlineVisibleLength(combined) <= maxLineLength) {
+          joined[joined.length - 1] = combined;
+        } else {
+          joined.push(line);
+        }
+      }
+
+      return joined.join('\n');
+    })
+    .join('\n\n')
+    .trim();
+}
+
 const TITLE_FIT_LEVELS = new Set(['normal', 'tight', 'compressed']);
 const TITLE_FIELDS_BY_LAYOUT = Object.freeze({
   '02': 'question'
@@ -53,7 +89,7 @@ const CONTENT_FIT_RULES = Object.freeze({
 });
 
 function visibleCharacterCount(value) {
-  return Array.from(text(value).replace(/\s+/g, '')).length;
+  return inlineVisibleLength(text(value));
 }
 
 function inferTitleFitLevel(card) {
@@ -86,7 +122,7 @@ function inferContentFitLevel(card) {
   const fields = CONTENT_FIELDS_BY_LAYOUT[card.layout] || [];
   const lines = fields
     .flatMap((field) => textParts(card[field]))
-    .flatMap((value) => text(value).split(/\r?\n/))
+    .flatMap((value) => joinShortBodyLines(value).split(/\r?\n/))
     .map((line) => line.trim())
     .filter(Boolean);
   const length = visibleCharacterCount(lines.join('\n'));
@@ -285,7 +321,7 @@ function renderList(items = []) {
     <div class="item-list">
       ${items
         .map((item, index) => {
-          const value = typeof item === 'string' ? item : item.text || item.description || '';
+          const value = joinShortBodyLines(typeof item === 'string' ? item : item.text || item.description || '');
           const number = typeof item === 'string' ? String(index + 1).padStart(2, '0') : item.number || String(index + 1).padStart(2, '0');
           return `
             <div class="list-item">
@@ -319,7 +355,7 @@ function renderCardBody(card) {
         <p class="label">${multiline(card.question_label || 'Question')}</p>
         <h2>${multiline(card.question)}</h2>
         <p class="label muted-label">${multiline(card.answer_label || 'Answer')}</p>
-        <p class="body large">${multiline(card.answer)}</p>
+        <p class="body large">${multiline(joinShortBodyLines(card.answer, 22))}</p>
       </div>
     `;
   }
@@ -343,11 +379,11 @@ function renderCardBody(card) {
         <h2>${multiline(card.title)}</h2>
         <div class="split-block">
           <p class="label">${multiline(card.problem_title || 'Problem')}</p>
-          <p>${multiline(problem)}</p>
+          <p>${multiline(joinShortBodyLines(problem))}</p>
         </div>
         <div class="split-block accent-block">
           <p class="label">${multiline(card.solution_title || 'Solution')}</p>
-          <p>${multiline(solution)}</p>
+          <p>${multiline(joinShortBodyLines(solution))}</p>
         </div>
       </div>
     `;
@@ -365,7 +401,7 @@ function renderCardBody(card) {
                   <span>${index + 1}</span>
                   <div>
                     <h3>${multiline(step.title)}</h3>
-                    <p>${multiline(step.description)}</p>
+                    <p>${multiline(joinShortBodyLines(step.description))}</p>
                   </div>
                 </div>
               `
@@ -395,11 +431,11 @@ function renderCardBody(card) {
         <div class="before-after">
           <section>
             <p class="label">Before</p>
-            <p>${multiline(before)}</p>
+            <p>${multiline(joinShortBodyLines(before))}</p>
           </section>
           <section class="after">
             <p class="label">After</p>
-            <p>${multiline(after)}</p>
+            <p>${multiline(joinShortBodyLines(after))}</p>
           </section>
         </div>
       </div>
@@ -410,7 +446,7 @@ function renderCardBody(card) {
     return `
       <div class="one-message">
         <h2>${multiline(card.title)}</h2>
-        <p>${multiline(card.description)}</p>
+        <p>${multiline(joinShortBodyLines(card.description, 22))}</p>
       </div>
     `;
   }
@@ -428,8 +464,8 @@ function renderCardBody(card) {
     return `
       <div class="closing">
         <h2>${multiline(card.title)}</h2>
-        <p class="body large">${multiline(card.description)}</p>
-        <p class="save-note">${multiline(card.cta)}</p>
+        <p class="body large">${multiline(joinShortBodyLines(card.description, 22))}</p>
+        <p class="save-note">${multiline(joinShortBodyLines(card.cta, 22))}</p>
       </div>
     `;
   }
@@ -437,7 +473,7 @@ function renderCardBody(card) {
   return `
     <div class="stack">
       <h2>${multiline(card.title || card.layout_name || 'Card')}</h2>
-      <p class="body large">${multiline(card.description || card.body || '')}</p>
+      <p class="body large">${multiline(joinShortBodyLines(card.description || card.body || '', 22))}</p>
     </div>
   `;
 }

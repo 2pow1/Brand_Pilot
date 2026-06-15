@@ -182,6 +182,46 @@ test('keeps short line-heavy before-after cards in tight rendering', () => {
   assert.doesNotMatch(html, /content-fit-compressed"/);
 });
 
+test('joins short manual body line breaks before rendering', () => {
+  const html = buildInstagramSketchCardHtml({
+    cwd: 'D:/workspace/Brand_Pilot',
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      contentTitle: 'Card title'
+    },
+    card: {
+      index: 5,
+      page: '5/8',
+      layout: '05',
+      layout_name: 'Checklist',
+      title: '먼저 볼 4가지',
+      items: [
+        '프로필과 페이지가\n같은 말을 하는가',
+        '한 문장으로\n대상이 보이는가',
+        '고객 상황에서\n글이 시작되는가',
+        '성과보다 과정과\n기준을 보여주는가'
+      ]
+    },
+    total: 8
+  });
+
+  assert.match(html, /프로필과 페이지가 같은 말을 하는가/);
+  assert.match(html, /성과보다 과정과 기준을 보여주는가/);
+  assert.doesNotMatch(html, /프로필과 페이지가<br>같은 말을 하는가/);
+});
+
 test('compresses dense problem-solution sketch cards', () => {
   const html = buildInstagramSketchCardHtml({
     cwd: 'D:/workspace/Brand_Pilot',
@@ -208,10 +248,11 @@ test('compresses dense problem-solution sketch cards', () => {
       layout_name: 'Problem / Solution',
       title: '반응이 없는 이유는\n게시물 개수만의 문제가 아닙니다',
       problem_title: '문제',
-      problem: '서비스 출시.\n행사 참여.\n제휴 소식.\n채용 공고.\n\n회사 이야기는 많은데\n고객이 궁금한 질문에는\n답이 없습니다.',
+      problem:
+        '서비스 출시와 행사 참여 소식만 계속 쌓입니다.\n제휴 발표와 채용 공고가 같은 형식으로 반복됩니다.\n회사 이야기는 많은데 고객 질문에는 답이 없습니다.\n믿을 단서와 판단 기준이 보이지 않습니다.',
       solution_title: '방향',
       solution:
-        '이 브랜드가\n어떤 문제를 잘 해결하는지.\n\n대표와 팀이\n어떤 관점으로 일하는지.\n\n비슷한 고객에게\n어떤 도움을 줬는지 보여줘야 합니다.'
+        '이 브랜드가 어떤 문제를 반복해서 해결했는지 보여줘야 합니다.\n대표와 팀이 어떤 관점으로 일하는지 짧게 설명해야 합니다.\n비슷한 고객에게 어떤 도움을 줬는지 사례로 남겨야 합니다.\n고객의 고민에서 시작해 신뢰의 근거를 쌓아야 합니다.'
     },
     total: 7
   });
