@@ -71,6 +71,9 @@ test('exposes runnable prompt builders and schemas', () => {
   assert.equal(typeof sketchPrompt.system, 'string');
   assert.equal(typeof sketchPrompt.user, 'string');
   assert.equal(sketchSpec.schema.type, 'object');
+  assert.equal(sketchSpec.responseName, 'brand_pilot_instagram_sketch_channel');
+  assert.equal(sketchSpec.sourceFiles.includes('src/prompts/instagram/sketch-card-news-v2/prompt.js'), true);
+  assert.equal(typeof sketchSpec.textFitPolicy.joinShortBodyLines, 'function');
 
   const imageSpec = getPromptSpec('instagram.cover-image.v1');
   const imagePrompt = imageSpec.buildPrompt('Sketch-note background');

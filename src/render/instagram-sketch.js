@@ -2,6 +2,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { generateOpenAiImage } from '../openai/image.js';
+import {
+  classifySketchContentFit,
+  classifySketchTitleFit,
+  joinShortBodyLines,
+  normalizeSketchText,
+  SKETCH_TITLE_FIELDS
+} from '../prompts/instagram/sketch-card-news-v2/text-fit-policy.js';
 
 export const INSTAGRAM_SKETCH_CARD_NEWS_TEMPLATE = 'instagram-sketch-card-news-v2';
 
@@ -31,132 +38,28 @@ function text(value) {
   return String(value ?? '').trim();
 }
 
-function inlineVisibleLength(value) {
-  return Array.from(String(value ?? '').replace(/\s+/g, '')).length;
-}
-
-function joinShortBodyLines(value, maxLineLength = 18) {
-  const normalized = text(value)
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n');
-  if (!normalized) return normalized;
-
-  return normalized
-    .split(/\n{2,}/)
-    .map((paragraph) => {
-      const lines = paragraph
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean);
-      const joined = [];
-
-      for (const line of lines) {
-        const previous = joined.at(-1);
-        const combined = previous ? `${previous} ${line}` : line;
-        if (previous && inlineVisibleLength(combined) <= maxLineLength) {
-          joined[joined.length - 1] = combined;
-        } else {
-          joined.push(line);
-        }
-      }
-
-      return joined.join('\n');
-    })
-    .join('\n\n')
-    .trim();
-}
-
 const TITLE_FIT_LEVELS = new Set(['normal', 'tight', 'compressed']);
-const TITLE_FIELDS_BY_LAYOUT = Object.freeze({
-  '02': 'question'
-});
 const CONTENT_FIT_LEVELS = new Set(['normal', 'tight', 'compressed']);
-const CONTENT_FIELDS_BY_LAYOUT = Object.freeze({
-  '02': ['answer'],
-  '03': ['problem', 'solution'],
-  '04': ['steps'],
-  '05': ['items'],
-  '06': ['before', 'after'],
-  '07': ['description'],
-  '08': ['items'],
-  '09': ['description', 'cta']
-});
-const CONTENT_FIT_RULES = Object.freeze({
-  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 95 },
-  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17, compressedLineMinLength: 95 },
-  default: { normal: 105, tight: 145, normalLines: 8, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 105 }
-});
-
-function visibleCharacterCount(value) {
-  return inlineVisibleLength(text(value));
-}
-
-function inferTitleFitLevel(card) {
-  const field = TITLE_FIELDS_BY_LAYOUT[card.layout] || 'title';
-  const title = text(card[field]);
-  const lineCount = title ? title.split(/\r?\n/).filter(Boolean).length : 0;
-  const length = visibleCharacterCount(title);
-  const maxLineLength = Math.max(0, ...title.split(/\r?\n/).map(visibleCharacterCount));
-
-  if (length > 36 || maxLineLength > 22 || lineCount > 3) return 'compressed';
-  if (length > 26 || maxLineLength > 16 || lineCount > 2) return 'tight';
-  return 'normal';
-}
 
 function titleFitLevel(card) {
   const level = text(card.titleFit?.level);
-  return TITLE_FIT_LEVELS.has(level) ? level : inferTitleFitLevel(card);
-}
+  if (TITLE_FIT_LEVELS.has(level)) return level;
 
-function textParts(value) {
-  if (!value) return [];
-  if (typeof value === 'string') return [value];
-  if (Array.isArray(value)) return value.flatMap(textParts);
-  if (typeof value === 'object') return Object.values(value).flatMap(textParts);
-  return [];
-}
-
-function inferContentFitLevel(card) {
-  const rule = CONTENT_FIT_RULES[card.layout] || CONTENT_FIT_RULES.default;
-  const fields = CONTENT_FIELDS_BY_LAYOUT[card.layout] || [];
-  const lines = fields
-    .flatMap((field) => textParts(card[field]))
-    .flatMap((value) => joinShortBodyLines(value).split(/\r?\n/))
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const length = visibleCharacterCount(lines.join('\n'));
-  const estimatedLineCount = lines.reduce(
-    (sum, line) => sum + Math.max(1, Math.ceil(visibleCharacterCount(line) / rule.maxLineLength)),
-    0
-  );
-  const maxLineLength = Math.max(0, ...lines.map(visibleCharacterCount));
-  const lineOverflowIsDense =
-    estimatedLineCount > rule.tightLines &&
-    length > (rule.compressedLineMinLength ?? rule.normal);
-
-  if (
-    length > rule.tight ||
-    lineOverflowIsDense ||
-    maxLineLength > rule.maxLineLength + 8
-  ) {
-    return 'compressed';
-  }
-
-  if (
-    length > rule.normal ||
-    estimatedLineCount > rule.normalLines ||
-    maxLineLength > rule.maxLineLength
-  ) {
-    return 'tight';
-  }
-
-  return 'normal';
+  const field = SKETCH_TITLE_FIELDS[card.layout] || 'title';
+  return classifySketchTitleFit({
+    layout: card.layout,
+    value: card[field]
+  }).level;
 }
 
 function contentFitLevel(card) {
   const level = text(card.contentFit?.level);
-  return CONTENT_FIT_LEVELS.has(level) ? level : inferContentFitLevel(card);
+  return CONTENT_FIT_LEVELS.has(level)
+    ? level
+    : classifySketchContentFit({
+        layout: card.layout,
+        card
+      }).level;
 }
 
 function escapeRegExp(value) {
@@ -164,10 +67,7 @@ function escapeRegExp(value) {
 }
 
 function stripLeadingSectionLabel(value, labels) {
-  const normalized = text(value)
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n');
+  const normalized = normalizeSketchText(value);
   const choices = labels.map(text).filter(Boolean);
   if (!normalized || choices.length === 0) return normalized;
 
