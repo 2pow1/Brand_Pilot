@@ -212,7 +212,7 @@ test('adds content fit metadata and strips repeated section labels from dense sk
 
   assert.doesNotMatch(beforeAfterCard.before, /^Before/i);
   assert.doesNotMatch(beforeAfterCard.after, /^After/i);
-  assert.equal(beforeAfterCard.contentFit.level, 'tight');
+  assert.equal(beforeAfterCard.contentFit.level, 'normal');
   assert.equal(beforeAfterCard.contentFit.fields.includes('before'), true);
   assert.equal(beforeAfterCard.contentFit.fields.includes('after'), true);
 });

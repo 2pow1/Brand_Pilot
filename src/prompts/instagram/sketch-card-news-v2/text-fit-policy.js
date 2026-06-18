@@ -26,14 +26,14 @@ export const SKETCH_CONTENT_FIELDS = Object.freeze({
 });
 
 export const SKETCH_CONTENT_BUDGETS = Object.freeze({
-  '02': { normal: 90, tight: 125, normalLines: 5, tightLines: 7, maxLineLength: 18, compressedLineMinLength: 90 },
-  '03': { normal: 95, tight: 130, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 95 },
-  '04': { normal: 120, tight: 160, normalLines: 9, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 120 },
-  '05': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 110 },
-  '06': { normal: 95, tight: 120, normalLines: 7, tightLines: 9, maxLineLength: 17, compressedLineMinLength: 95 },
-  '07': { normal: 90, tight: 125, normalLines: 4, tightLines: 6, maxLineLength: 20, compressedLineMinLength: 90 },
-  '08': { normal: 110, tight: 150, normalLines: 8, tightLines: 11, maxLineLength: 18, compressedLineMinLength: 110 },
-  '09': { normal: 100, tight: 140, normalLines: 6, tightLines: 8, maxLineLength: 18, compressedLineMinLength: 100 }
+  '02': { normal: 105, tight: 140, normalLines: 6, tightLines: 8, maxLineLength: 18, compressedLineMinLength: 105 },
+  '03': { normal: 110, tight: 150, normalLines: 9, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 110 },
+  '04': { normal: 135, tight: 175, normalLines: 10, tightLines: 13, maxLineLength: 18, compressedLineMinLength: 135 },
+  '05': { normal: 130, tight: 170, normalLines: 9, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 130 },
+  '06': { normal: 110, tight: 145, normalLines: 8, tightLines: 10, maxLineLength: 17, compressedLineMinLength: 110 },
+  '07': { normal: 110, tight: 145, normalLines: 5, tightLines: 7, maxLineLength: 20, compressedLineMinLength: 110 },
+  '08': { normal: 130, tight: 170, normalLines: 9, tightLines: 12, maxLineLength: 18, compressedLineMinLength: 130 },
+  '09': { normal: 120, tight: 160, normalLines: 7, tightLines: 9, maxLineLength: 18, compressedLineMinLength: 120 }
 });
 
 /**

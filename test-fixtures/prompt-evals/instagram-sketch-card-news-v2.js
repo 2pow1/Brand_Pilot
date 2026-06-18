@@ -1,6 +1,8 @@
 export const instagramSketchCardNewsV2EvalFixture = Object.freeze({
   requiredPromptSnippets: Object.freeze([
     'Prefer one-line titles when they fit naturally.',
+    'Use the expanded space primarily for body copy, examples, contrast, and supporting details.',
+    'Avoid under-filled content cards.',
     'Prefer one-line body copy when it fits naturally inside the card box.',
     'Do not split short body phrases under 18 visible characters.',
     'Before returning JSON, apply the text fit rules from the system prompt.'
