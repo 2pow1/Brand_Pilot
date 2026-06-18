@@ -27,10 +27,13 @@ const relatedFiles = Object.freeze([
   'test/channel-openai.test.js',
   'test/channel.test.js',
   'test/openai-responses.test.js',
-  'test/render.test.js'
+  'test/prompt-eval.test.js',
+  'test/render.test.js',
+  'test-fixtures/prompt-evals/instagram-sketch-card-news-v2.js'
 ]);
 
 const verification = Object.freeze([
+  'node --no-warnings=ExperimentalWarning --test test/prompt-eval.test.js',
   'node --no-warnings=ExperimentalWarning --test test/channel-openai.test.js',
   'node --no-warnings=ExperimentalWarning --test test/channel.test.js',
   'node --no-warnings=ExperimentalWarning --test test/render.test.js',

@@ -73,6 +73,7 @@ test('exposes runnable prompt builders and schemas', () => {
   assert.equal(sketchSpec.schema.type, 'object');
   assert.equal(sketchSpec.responseName, 'brand_pilot_instagram_sketch_channel');
   assert.equal(sketchSpec.sourceFiles.includes('src/prompts/instagram/sketch-card-news-v2/prompt.js'), true);
+  assert.equal(sketchSpec.verification.includes('node --no-warnings=ExperimentalWarning --test test/prompt-eval.test.js'), true);
   assert.equal(typeof sketchSpec.textFitPolicy.joinShortBodyLines, 'function');
 
   const imageSpec = getPromptSpec('instagram.cover-image.v1');
