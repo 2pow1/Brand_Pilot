@@ -23,7 +23,7 @@ Keeping the map explicit prevents prompt edits from depending on memory of the s
 | --- | --- | --- | --- | --- |
 | `draft.master.v1` | Convert collected source material into the approved master draft shape. | `src/draft/prompt.js` | `src/draft/schema.js`, `src/draft/openai.js` | `node --no-warnings=ExperimentalWarning --test test/draft.test.js` |
 | `instagram.card-news.v1` | Adapt an approved master draft into the original Instagram card-news payload. | `src/channel/prompt.js` | `src/channel/schema.js`, `src/channel/openai.js`, `src/channel/instagram.js` | `node --no-warnings=ExperimentalWarning --test test/channel-openai.test.js` |
-| `instagram.sketch-card-news.v2` | Adapt an approved master draft into the sketch-note card-news payload. | `src/channel/prompt.js` | `src/channel/schema.js`, `src/channel/openai.js`, `src/channel/instagram.js`, `src/render/instagram-sketch.js` | `node --no-warnings=ExperimentalWarning --test test/channel-openai.test.js` |
+| `instagram.sketch-card-news.v2` | Adapt an approved master draft into the sketch-note card-news payload. | `src/prompts/instagram/sketch-card-news-v2/index.js` | `src/prompts/instagram/sketch-card-news-v2/prompt.js`, `src/prompts/instagram/sketch-card-news-v2/schema.js`, `src/prompts/instagram/sketch-card-news-v2/text-fit-policy.js`, `src/channel/instagram.js`, `src/render/instagram-sketch.js` | `node --no-warnings=ExperimentalWarning --test test/channel-openai.test.js` |
 | `instagram.cover-image.v1` | Add final no-text constraints for OpenAI Image API cover backgrounds. | `src/openai/image.js` | `src/channel/prompt.js`, `src/render/instagram-sketch.js` | `node --no-warnings=ExperimentalWarning --test test/openai-image.test.js` |
 
 ## Edit Checklist
@@ -40,7 +40,7 @@ When changing a prompt, check the matching registry entry first:
 
 Phase 1 keeps runtime behavior unchanged and adds the prompt map plus registry. This makes the current system searchable before moving code.
 
-Phase 2 should move the sketch v2 prompt, schema, text-fit policy, cover-image policy, and renderer-facing contract into a feature-owned prompt spec folder.
+Phase 2 moves the sketch v2 prompt, schema, text-fit policy, and renderer-facing contract into `src/prompts/instagram/sketch-card-news-v2`.
 
 Phase 3 should extract the duplicated OpenAI Responses API request assembly into a shared OpenAI client.
 
