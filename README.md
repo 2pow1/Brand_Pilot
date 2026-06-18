@@ -50,6 +50,7 @@ Brand Pilot은 클라이언트 자사의 홍보 콘텐츠 생성을 자동화하
 - `docs/discord-review.md`: Discord bot, 검수 채널, Supabase Edge Function, Interactions Endpoint URL
 - `docs/notion-mirror.md`: Notion data source 속성, sync, artifact backup, Storage cleanup
 - `docs/supabase-architecture.md`: Supabase Postgres/Storage/Edge Function 운영 구조
+- `docs/prompt-map.md`: GPT prompt edit map, source files, related contracts, verification commands
 
 ## 로컬 실행
 
