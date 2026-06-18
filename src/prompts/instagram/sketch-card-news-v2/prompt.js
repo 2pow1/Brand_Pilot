@@ -118,6 +118,18 @@ const sketchTextFitGuidance = [
   '- description or cta: usually 1 to 4 compact lines, about 80 visible characters total for description and 45 for cta.'
 ].join('\n');
 
+const sketchChromeGuidance = [
+  'Template chrome options:',
+  '- Return a top-level chrome object with header and footer.',
+  '- Allowed values are normal, compact, and hidden.',
+  '- header controls the top brand name and layout/page name area.',
+  '- footer controls the bottom content title and page indicator area.',
+  '- Default to normal when the card flow has enough room.',
+  '- Prefer compact before hidden when body copy needs more visual breathing room.',
+  '- Use hidden only when the content would otherwise feel cramped or when a cleaner editorial crop is clearly better.',
+  '- Do not use chrome settings to compensate for overly long titles. Keep titles compact first.'
+].join('\n');
+
 /**
  * Builds the prompt for the GrowthLine sketch-note Instagram template.
  */
@@ -155,6 +167,8 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
       sketchCoverImagePromptGuidance,
       '',
       sketchTextFitGuidance,
+      '',
+      sketchChromeGuidance,
       '',
       'LAYOUT 02. Q&A',
       '- 독자가 실제로 궁금해할 질문이 있을 때 사용한다.',
@@ -196,6 +210,8 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
       '- 2~8번 레이아웃 중 내용에 필요 없는 것은 제외한다.',
       '- recommended_layout_flow는 실제 cards 순서와 일치해야 한다.',
       '',
+      '- chrome.header and chrome.footer must be one of normal, compact, or hidden.',
+      '',
       ctaEnabled
         ? 'CTA URL이 설정되어 있다. 마지막 장과 caption에는 과하지 않은 CTA를 사용할 수 있다.'
         : 'CTA URL이 설정되어 있지 않다. 오픈채팅, QR, 링크, 상담 링크, 샘플 URL을 언급하지 않는다.',
@@ -227,6 +243,8 @@ export function buildInstagramSketchCardNewsPrompt({ config = {}, brand, item, c
       staticFinalCtaEnabled
         ? 'When static final CTA image is enabled, keep the normal 2 to 8 card flow. The final Closing card visual will be replaced by the static CTA image during rendering, so use Closing only as metadata.'
         : 'When static final CTA image is disabled, return 2 to 8 cards and omit optional middle layouts that are not useful.',
+      '',
+      'Choose chrome.header and chrome.footer conservatively. Use normal by default, compact when the deck needs a little more room, and hidden only when the visible content clearly benefits from removing that chrome.',
       '',
       'Create Instagram sketch card-news content that matches the JSON schema. Include cover_image_prompt for the thumbnail/background image, but do not place image instructions inside card text.',
       'Before returning JSON, apply the text fit rules from the system prompt. If any card exceeds the budget, shorten it or split the idea into another useful card.'

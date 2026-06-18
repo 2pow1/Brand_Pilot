@@ -112,8 +112,57 @@ test('generates sketch-template Instagram payloads when v2 template is configure
   assert.equal(payload.cards[0].layout, '01');
   assert.equal(payload.cards.at(-1).layout, '09');
   assert.ok(payload.cards.length <= 8);
+  assert.deepEqual(payload.chrome, { header: 'normal', footer: 'normal' });
   assert.equal(payload.coverImagePrompt.length > 0, true);
   assert.equal(payload.generation.schema, 'instagram-sketch-card-news-v2');
+});
+
+test('normalizes sketch chrome options from channel adaptation', () => {
+  const payload = applyInstagramSketchCardNewsAdaptation({
+    brand,
+    item,
+    channel: instagramSketchChannel,
+    adaptation: {
+      content_title: 'Chrome option test',
+      content_angle: 'Check that renderer chrome settings survive normalization.',
+      recommended_layout_flow: ['01', '05', '09'],
+      chrome: {
+        header: 'compact',
+        footer: 'hidden'
+      },
+      cover_image_prompt: 'Warm paper background with no readable text.',
+      caption: 'Caption',
+      hashtags: ['GrowthLine'],
+      cards: [
+        {
+          layout: '01',
+          layout_name: 'Cover',
+          usage_reason: 'Open the flow.',
+          series: 'GrowthLine Note',
+          kicker: 'BRAND NOTE',
+          title: 'Compact chrome test',
+          subtitle: 'A short subtitle'
+        },
+        {
+          layout: '05',
+          layout_name: 'Checklist',
+          usage_reason: 'Show useful checks.',
+          title: 'Check these first',
+          items: ['Audience is clear', 'Problem is specific', 'Process is visible', 'Next action is natural']
+        },
+        {
+          layout: '09',
+          layout_name: 'Closing',
+          usage_reason: 'Close the flow.',
+          title: 'Save this',
+          description: 'Use these checks before writing the next post.',
+          cta: 'Review the message once more.'
+        }
+      ]
+    }
+  });
+
+  assert.deepEqual(payload.chrome, { header: 'compact', footer: 'hidden' });
 });
 
 test('adds title fit metadata to long sketch-template card titles', () => {

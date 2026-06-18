@@ -99,7 +99,7 @@ test('infers compact rendering for long sketch card titles', () => {
   });
 
   assert.match(html, /layout-06/);
-  assert.match(html, /class="slide layout-06 title-fit-compressed content-fit-(?:normal|tight|compressed)"/);
+  assert.match(html, /class="slide layout-06 title-fit-compressed content-fit-(?:normal|tight|compressed) chrome-header-normal chrome-footer-normal"/);
   assert.match(html, /\.title-fit-compressed h2/);
   assert.match(html, /font-size: 50px/);
 });
@@ -136,7 +136,7 @@ test('compresses dense sketch body layouts and strips repeated section labels', 
     total: 7
   });
 
-  assert.match(html, /class="slide layout-06 title-fit-normal content-fit-compressed"/);
+  assert.match(html, /class="slide layout-06 title-fit-normal content-fit-compressed chrome-header-normal chrome-footer-normal"/);
   assert.match(html, /\.layout-06\.content-fit-compressed \.before-after section > p:not\(\.label\)/);
   assert.match(html, /\.layout-06\.content-fit-compressed \.content {\n    padding-top: 64px;/);
   assert.match(html, /\.content-fit-compressed h2 {\n    margin-bottom: 52px;/);
@@ -176,7 +176,7 @@ test('keeps short line-heavy before-after cards in tight rendering', () => {
     total: 8
   });
 
-  assert.match(html, /class="slide layout-06 title-fit-normal content-fit-tight"/);
+  assert.match(html, /class="slide layout-06 title-fit-normal content-fit-tight chrome-header-normal chrome-footer-normal"/);
   assert.match(html, /\.layout-06\.content-fit-tight \.before-after section > p:not\(\.label\)/);
   assert.match(html, /font-size: 31px/);
   assert.doesNotMatch(html, /content-fit-compressed"/);
@@ -222,6 +222,50 @@ test('joins short manual body line breaks before rendering', () => {
   assert.doesNotMatch(html, /프로필과 페이지가<br>같은 말을 하는가/);
 });
 
+test('applies compact and hidden sketch chrome options while rendering', () => {
+  const html = buildInstagramSketchCardHtml({
+    cwd: 'D:/workspace/Brand_Pilot',
+    payload: {
+      brandName: 'GrowthLine',
+      template: 'instagram-sketch-card-news-v2',
+      dimensions: {
+        width: 1080,
+        height: 1350
+      },
+      design: {
+        background: '#f7f1e3',
+        foreground: '#151515',
+        muted: '#706b61',
+        accent: '#c9f24d',
+        border: '#1c1c1c'
+      },
+      chrome: {
+        header: 'compact',
+        footer: 'hidden'
+      },
+      contentTitle: 'Hidden footer title'
+    },
+    card: {
+      index: 5,
+      page: '5/8',
+      layout: '05',
+      layout_name: 'Checklist',
+      title: 'Use more space',
+      items: ['Audience is clear', 'Problem is specific', 'Process is visible', 'Next action is natural']
+    },
+    total: 8
+  });
+
+  assert.match(html, /chrome-header-compact/);
+  assert.match(html, /chrome-footer-hidden/);
+  assert.match(html, /<header class="brand">/);
+  assert.doesNotMatch(html, /<footer class="footer">/);
+  assert.doesNotMatch(html, /Hidden footer title/);
+  assert.match(html, /\.slide\.chrome-header-compact {\n    --header-space: 46px;/);
+  assert.match(html, /\.slide\.chrome-footer-hidden {\n    --footer-space: 0px;/);
+  assert.match(html, /height: calc\(100% - var\(--header-space\) - var\(--footer-space\)\);/);
+});
+
 test('compresses dense problem-solution sketch cards', () => {
   const html = buildInstagramSketchCardHtml({
     cwd: 'D:/workspace/Brand_Pilot',
@@ -257,9 +301,9 @@ test('compresses dense problem-solution sketch cards', () => {
     total: 7
   });
 
-  assert.match(html, /class="slide layout-03 title-fit-normal content-fit-compressed"/);
+  assert.match(html, /class="slide layout-03 title-fit-normal content-fit-compressed chrome-header-normal chrome-footer-normal"/);
   assert.match(html, /\.layout-03\.content-fit-compressed \.split-block p:not\(\.label\)/);
-  assert.match(html, /\.layout-03\.content-fit-compressed \.content {\n    height: calc\(100% - 214px\);\n    padding-top: 62px;/);
+  assert.match(html, /\.layout-03\.content-fit-compressed \.content {\n    height: calc\(100% - var\(--header-space\) - var\(--footer-space\) - 98px\);\n    padding-top: 62px;/);
   assert.match(html, /\.layout-03\.content-fit-compressed h2 {\n    margin-bottom: 50px;/);
   assert.match(html, /font-size: 26px/);
 });
@@ -373,7 +417,7 @@ test('writes cover image data directly into the sketch cover background rule', (
   });
 
   assert.match(html, /background-image: url\("data:image\/png;base64,/);
-  assert.match(html, /\.slide\.has-cover-image \.content {\n    align-items: flex-end;\n    height: calc\(100% - 240px\);/);
+  assert.match(html, /\.slide\.has-cover-image \.content {\n    align-items: flex-end;\n    height: calc\(100% - var\(--header-space\) - var\(--footer-space\) - 124px\);/);
   assert.match(html, /\.slide\.has-cover-image \.cover-copy {\n    position: relative;\n    margin-top: 0;/);
   assert.match(html, /\.footer span:first-child {\n    max-width: calc\(100% - 96px\);/);
   assert.match(html, /\.slide\.has-cover-image \.footer span {\n    padding: 5px 8px 6px;\n    background: rgba\(251, 246, 232, 0\.78\);/);

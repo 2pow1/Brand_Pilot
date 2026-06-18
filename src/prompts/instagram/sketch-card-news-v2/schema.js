@@ -35,6 +35,27 @@ const emphasisTitleField = {
   maxLength: 44
 };
 
+const chromeModeField = {
+  type: 'string',
+  enum: ['normal', 'compact', 'hidden']
+};
+
+const chromeSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['header', 'footer'],
+  properties: {
+    header: {
+      ...chromeModeField,
+      description: 'Top chrome mode. Controls the rendered brand name and page/layout name.'
+    },
+    footer: {
+      ...chromeModeField,
+      description: 'Bottom chrome mode. Controls the rendered content title and page indicator.'
+    }
+  }
+};
+
 const stepSchema = {
   type: 'object',
   additionalProperties: false,
@@ -61,7 +82,16 @@ const summaryItemSchema = {
 export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
   type: 'object',
   additionalProperties: false,
-  required: ['content_title', 'content_angle', 'recommended_layout_flow', 'cover_image_prompt', 'caption', 'hashtags', 'cards'],
+  required: [
+    'content_title',
+    'content_angle',
+    'recommended_layout_flow',
+    'chrome',
+    'cover_image_prompt',
+    'caption',
+    'hashtags',
+    'cards'
+  ],
   properties: {
     content_title: textField,
     content_angle: textField,
@@ -74,6 +104,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA = Object.freeze({
         enum: ['01', '02', '03', '04', '05', '06', '07', '08', '09']
       }
     },
+    chrome: chromeSchema,
     cover_image_prompt: {
       type: 'string',
       description: 'Prompt for generating or selecting the first cover background image. Do not include card text here.'

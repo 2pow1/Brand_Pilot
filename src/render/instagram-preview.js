@@ -24,6 +24,10 @@ export function createInstagramSketchPreviewPayload({ brand = {} } = {}) {
     contentTitle: 'Preview: clearer customer signal',
     contentAngle: 'Checks how the v2 sketch template handles supported card layouts.',
     recommendedLayoutFlow: ['01', '02', '03', '04', '05', '06', '07', '09'],
+    chrome: {
+      header: 'normal',
+      footer: 'normal'
+    },
     coverImagePrompt:
       'A hand-drawn brand strategy sketch note background for a small business marketing insight, warm paper texture, black ink lines, lime accent, no readable text.',
     cards: [

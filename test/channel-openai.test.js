@@ -94,6 +94,10 @@ test('creates sketch-template Instagram payloads from OpenAI channel adaptation'
     content_title: 'Sketch content title',
     content_angle: 'Show why promotion needs clearer structure.',
     recommended_layout_flow: ['01', '03', '05', '09'],
+    chrome: {
+      header: 'compact',
+      footer: 'hidden'
+    },
     cover_image_prompt: 'Sketch note background with warm paper texture and lime accents, no readable text.',
     caption: 'Caption without links',
     hashtags: ['GrowthLine', 'branding'],
@@ -147,6 +151,12 @@ test('creates sketch-template Instagram payloads from OpenAI channel adaptation'
     fetchImpl: async (_url, init) => {
       const body = JSON.parse(init.body);
       assert.equal(body.text.format.name, 'brand_pilot_instagram_sketch_channel');
+      assert.deepEqual(body.text.format.schema.properties.chrome.properties.header.enum, [
+        'normal',
+        'compact',
+        'hidden'
+      ]);
+      assert.deepEqual(body.text.format.schema.required.includes('chrome'), true);
       const schemaVariants = body.text.format.schema.properties.cards.items.anyOf;
       const beforeAfterSchema = schemaVariants.find((variant) =>
         variant.properties.layout.enum.includes('06')
@@ -166,6 +176,7 @@ test('creates sketch-template Instagram payloads from OpenAI channel adaptation'
   assert.equal(payload.cards.length, 4);
   assert.equal(payload.cards[0].layout, '01');
   assert.equal(payload.cards.at(-1).layout, '09');
+  assert.deepEqual(payload.chrome, responsePayload.chrome);
   assert.equal(payload.coverImagePrompt, responsePayload.cover_image_prompt);
   assert.deepEqual(payload.hashtags, ['#GrowthLine', '#branding']);
   assert.equal(payload.generation.mode, 'openai-sketch-channel-adaptation');

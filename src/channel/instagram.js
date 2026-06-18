@@ -5,6 +5,7 @@ import {
   normalizeSketchText,
   SKETCH_TITLE_FIELDS
 } from '../prompts/instagram/sketch-card-news-v2/text-fit-policy.js';
+import { normalizeSketchChrome } from '../prompts/instagram/sketch-card-news-v2/chrome-policy.js';
 
 /**
  * Collapses arbitrary whitespace so slide and caption text fits predictable card layouts.
@@ -243,6 +244,10 @@ function createDefaultSketchAdaptation({ brand, item }) {
     content_title: title,
     content_angle: '작은 사업자가 홍보가 막히는 이유를 메시지 구조 관점에서 점검한다.',
     recommended_layout_flow: ['01', '03', '05', '09'],
+    chrome: {
+      header: 'normal',
+      footer: 'normal'
+    },
     cover_image_prompt:
       'A hand-drawn Korean brand strategy sketch note background for a small business marketing insight, warm paper texture, black ink lines, lime accent, no readable text.',
     caption: `${title}\n\n${truncate(body, 220)}`,
@@ -445,6 +450,7 @@ export function applyInstagramSketchCardNewsAdaptation({ brand, item, channel, a
     },
     contentTitle: normalizeSketchText(selected.content_title || item.draft_title || item.source_title),
     contentAngle: normalizeSketchText(selected.content_angle),
+    chrome: normalizeSketchChrome(selected.chrome),
     recommendedLayoutFlow: Array.isArray(selected.recommended_layout_flow)
       ? selected.recommended_layout_flow.map(normalizeSketchText).filter(Boolean)
       : cards.map((card) => card.layout),

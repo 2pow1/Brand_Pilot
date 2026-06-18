@@ -5,6 +5,8 @@ export const instagramSketchCardNewsV2EvalFixture = Object.freeze({
     'Avoid under-filled content cards.',
     'Prefer one-line body copy when it fits naturally inside the card box.',
     'Do not split short body phrases under 18 visible characters.',
+    'Template chrome options:',
+    'Allowed values are normal, compact, and hidden.',
     'Before returning JSON, apply the text fit rules from the system prompt.'
   ]),
   cases: Object.freeze([
@@ -40,6 +42,10 @@ export const instagramSketchCardNewsV2EvalFixture = Object.freeze({
         content_title: '링크드인은 신뢰를 쌓는 공간',
         content_angle: '작은 B2B 브랜드가 링크드인을 홍보판이 아니라 신뢰 축적 공간으로 써야 하는 이유.',
         recommended_layout_flow: Object.freeze(['01', '03', '06', '04', '05', '09']),
+        chrome: Object.freeze({
+          header: 'normal',
+          footer: 'normal'
+        }),
         cover_image_prompt:
           'Editorial sketch-note scene for a small B2B brand building trust before promotion, warm paper texture, black ink lines, lime accent, quiet business desk, no readable text.',
         caption: '링크드인은 홍보보다 신뢰를 쌓는 공간입니다.',

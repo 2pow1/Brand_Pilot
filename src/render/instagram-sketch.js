@@ -9,6 +9,7 @@ import {
   normalizeSketchText,
   SKETCH_TITLE_FIELDS
 } from '../prompts/instagram/sketch-card-news-v2/text-fit-policy.js';
+import { normalizeSketchChrome } from '../prompts/instagram/sketch-card-news-v2/chrome-policy.js';
 
 export const INSTAGRAM_SKETCH_CARD_NEWS_TEMPLATE = 'instagram-sketch-card-news-v2';
 
@@ -385,6 +386,7 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
   const width = Number(payload.dimensions?.width || 1080);
   const height = Number(payload.dimensions?.height || 1350);
   const design = payload.design || {};
+  const chrome = normalizeSketchChrome(payload.chrome);
   const staticImage = card.staticImageDataUrl || card.staticImagePath
     ? toCssImageUrl({ cwd, value: card.staticImageDataUrl || card.staticImagePath })
     : '';
@@ -394,6 +396,8 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     `layout-${escapeHtml(card.layout || 'unknown')}`,
     `title-fit-${titleFitLevel(card)}`,
     `content-fit-${contentFitLevel(card)}`,
+    `chrome-header-${chrome.header}`,
+    `chrome-footer-${chrome.footer}`,
     card.layout === '01' ? 'cover' : '',
     staticImage ? 'static-image-slide' : '',
     coverImage ? 'has-cover-image' : ''
@@ -437,6 +441,23 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
 </html>`;
   }
 
+  const headerHtml =
+    chrome.header === 'hidden'
+      ? ''
+      : `
+    <header class="brand">
+      <span>${escapeHtml(payload.brandName || 'GrowthLine')}</span>
+      <span>${escapeHtml(card.layout_name || '')}</span>
+    </header>`;
+  const footerHtml =
+    chrome.footer === 'hidden'
+      ? ''
+      : `
+    <footer class="footer">
+      <span>${escapeHtml(payload.contentTitle || payload.source?.title || '')}</span>
+      <span>${escapeHtml(card.page || `${card.index}/${total}`)}</span>
+    </footer>`;
+
   return `<!doctype html>
 <html lang="ko">
 <head>
@@ -469,6 +490,8 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
   }
 
   .slide {
+    --header-space: 72px;
+    --footer-space: 44px;
     position: relative;
     width: ${width}px;
     height: ${height}px;
@@ -477,6 +500,26 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
       radial-gradient(circle at 18% 12%, rgba(201, 242, 77, 0.24), transparent 22%),
       linear-gradient(180deg, #fffaf0 0%, var(--bg) 100%);
     overflow: hidden;
+  }
+
+  .slide.chrome-header-compact {
+    --header-space: 46px;
+    padding-top: 76px;
+  }
+
+  .slide.chrome-header-hidden {
+    --header-space: 0px;
+    padding-top: 64px;
+  }
+
+  .slide.chrome-footer-compact {
+    --footer-space: 28px;
+    padding-bottom: 64px;
+  }
+
+  .slide.chrome-footer-hidden {
+    --footer-space: 0px;
+    padding-bottom: 52px;
   }
 
   .slide::after {
@@ -525,17 +568,25 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     font-weight: 700;
   }
 
+  .chrome-header-compact .brand {
+    font-size: 23px;
+  }
+
+  .chrome-header-compact .brand span:last-child {
+    font-size: 18px;
+  }
+
   .content {
     position: relative;
     z-index: 2;
-    height: calc(100% - 116px);
+    height: calc(100% - var(--header-space) - var(--footer-space));
     display: flex;
     align-items: center;
   }
 
   .slide.has-cover-image .content {
     align-items: flex-end;
-    height: calc(100% - 240px);
+    height: calc(100% - var(--header-space) - var(--footer-space) - 124px);
   }
 
   .layout-06 .content,
@@ -552,19 +603,19 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
   .layout-03.content-fit-tight .content,
   .layout-06.content-fit-tight .content {
     align-items: flex-start;
-    height: calc(100% - 176px);
+    height: calc(100% - var(--header-space) - var(--footer-space) - 60px);
     padding-top: 48px;
   }
 
   .layout-03.content-fit-compressed .content,
   .layout-06.content-fit-compressed .content {
     align-items: flex-start;
-    height: calc(100% - 186px);
+    height: calc(100% - var(--header-space) - var(--footer-space) - 70px);
     padding-top: 34px;
   }
 
   .layout-03.content-fit-compressed .content {
-    height: calc(100% - 214px);
+    height: calc(100% - var(--header-space) - var(--footer-space) - 98px);
     padding-top: 62px;
   }
 
@@ -897,11 +948,20 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
     font-weight: 800;
   }
 
+  .chrome-footer-compact .footer {
+    bottom: 54px;
+    font-size: 18px;
+  }
+
   .footer span:first-child {
     max-width: calc(100% - 96px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .chrome-footer-compact .footer span:first-child {
+    max-width: calc(100% - 76px);
   }
 
   .slide.has-cover-image .footer span {
@@ -912,17 +972,11 @@ export function buildInstagramSketchCardHtml({ cwd, payload, card, total }) {
 </head>
 <body>
   <main class="${slideClass}">
-    <header class="brand">
-      <span>${escapeHtml(payload.brandName || 'GrowthLine')}</span>
-      <span>${escapeHtml(card.layout_name || '')}</span>
-    </header>
+    ${headerHtml}
     <section class="content">
       ${renderCardBody(card)}
     </section>
-    <footer class="footer">
-      <span>${escapeHtml(payload.contentTitle || payload.source?.title || '')}</span>
-      <span>${escapeHtml(card.page || `${card.index}/${total}`)}</span>
-    </footer>
+    ${footerHtml}
   </main>
 </body>
 </html>`;
@@ -1011,6 +1065,7 @@ export async function renderInstagramSketchCardNews({ cwd, contentItemId, payloa
     source: renderPayload.source,
     template: renderPayload.template,
     dimensions: renderPayload.dimensions,
+    chrome: renderPayload.chrome || null,
     coverImagePrompt: renderPayload.coverImagePrompt,
     coverImage: renderPayload.coverImage || null,
     finalCtaImage: renderPayload.finalCtaImage || null

@@ -1,6 +1,12 @@
 import { buildInstagramSketchCardNewsPrompt } from './prompt.js';
 import { INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA } from './schema.js';
 import {
+  DEFAULT_SKETCH_CHROME,
+  normalizeSketchChrome,
+  normalizeSketchChromeMode,
+  SKETCH_CHROME_MODES
+} from './chrome-policy.js';
+import {
   classifySketchContentFit,
   classifySketchTitleFit,
   joinShortBodyLines,
@@ -13,6 +19,7 @@ import {
 
 const sourceFiles = Object.freeze([
   'src/prompts/instagram/sketch-card-news-v2/index.js',
+  'src/prompts/instagram/sketch-card-news-v2/chrome-policy.js',
   'src/prompts/instagram/sketch-card-news-v2/prompt.js',
   'src/prompts/instagram/sketch-card-news-v2/schema.js',
   'src/prompts/instagram/sketch-card-news-v2/text-fit-policy.js'
@@ -47,6 +54,12 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC = Object.freeze({
   responseName: 'brand_pilot_instagram_sketch_channel',
   buildPrompt: buildInstagramSketchCardNewsPrompt,
   schema: INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA,
+  chromePolicy: Object.freeze({
+    modes: SKETCH_CHROME_MODES,
+    defaults: DEFAULT_SKETCH_CHROME,
+    normalizeSketchChrome,
+    normalizeSketchChromeMode
+  }),
   textFitPolicy: Object.freeze({
     normalizeSketchText,
     joinShortBodyLines,
@@ -64,6 +77,12 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC = Object.freeze({
 
 export { buildInstagramSketchCardNewsPrompt } from './prompt.js';
 export { INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA } from './schema.js';
+export {
+  DEFAULT_SKETCH_CHROME,
+  normalizeSketchChrome,
+  normalizeSketchChromeMode,
+  SKETCH_CHROME_MODES
+} from './chrome-policy.js';
 export {
   classifySketchContentFit,
   classifySketchTitleFit,
