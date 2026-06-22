@@ -56,6 +56,30 @@ test('sketch v2 prompt keeps eval-critical text fit instructions', () => {
   }
 });
 
+test('sketch v2 prompt renders copy limits from the shared policy', () => {
+  const [evalCase] = instagramSketchCardNewsV2EvalFixture.cases;
+  const prompt = INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC.buildPrompt({
+    config: {},
+    brand: evalCase.brand,
+    item: evalCase.item,
+    channel: evalCase.channel
+  });
+  const limits = INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC.promptCopyLimits;
+
+  assert.match(
+    prompt.system,
+    new RegExp(`Do not split short titles under ${limits.common.shortTitleNoBreakCharacters} visible characters`)
+  );
+  assert.match(
+    prompt.system,
+    new RegExp(`problem: usually ${limits.problemSolution.problemMinLines} to ${limits.problemSolution.problemMaxLines} compact lines, about ${limits.problemSolution.problemTargetCharacters} visible characters total`)
+  );
+  assert.match(
+    prompt.system,
+    new RegExp(`after: usually ${limits.beforeAfter.afterMinLines} to ${limits.beforeAfter.afterMaxLines} compact lines, about ${limits.beforeAfter.afterTargetCharacters} visible characters total`)
+  );
+});
+
 test('sketch v2 representative prompt outputs stay within fit budgets', () => {
   for (const evalCase of instagramSketchCardNewsV2EvalFixture.cases) {
     const payload = applyInstagramSketchCardNewsAdaptation({

@@ -1,5 +1,6 @@
 import { buildInstagramSketchCardNewsPrompt } from './prompt.js';
 import { INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA } from './schema.js';
+import { SKETCH_PROMPT_COPY_LIMITS } from './copy-limit-policy.js';
 import {
   DEFAULT_SKETCH_CHROME,
   normalizeSketchChrome,
@@ -20,6 +21,7 @@ import {
 const sourceFiles = Object.freeze([
   'src/prompts/instagram/sketch-card-news-v2/index.js',
   'src/prompts/instagram/sketch-card-news-v2/chrome-policy.js',
+  'src/prompts/instagram/sketch-card-news-v2/copy-limit-policy.js',
   'src/prompts/instagram/sketch-card-news-v2/prompt.js',
   'src/prompts/instagram/sketch-card-news-v2/schema.js',
   'src/prompts/instagram/sketch-card-news-v2/text-fit-policy.js'
@@ -54,6 +56,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC = Object.freeze({
   responseName: 'brand_pilot_instagram_sketch_channel',
   buildPrompt: buildInstagramSketchCardNewsPrompt,
   schema: INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA,
+  promptCopyLimits: SKETCH_PROMPT_COPY_LIMITS,
   chromePolicy: Object.freeze({
     modes: SKETCH_CHROME_MODES,
     defaults: DEFAULT_SKETCH_CHROME,
@@ -77,6 +80,7 @@ export const INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC = Object.freeze({
 
 export { buildInstagramSketchCardNewsPrompt } from './prompt.js';
 export { INSTAGRAM_SKETCH_CARD_NEWS_RESPONSE_SCHEMA } from './schema.js';
+export { SKETCH_PROMPT_COPY_LIMITS } from './copy-limit-policy.js';
 export {
   DEFAULT_SKETCH_CHROME,
   normalizeSketchChrome,
