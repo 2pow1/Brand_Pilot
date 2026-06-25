@@ -27,14 +27,14 @@ Discord interaction
     -> Supabase Postgres
 ```
 
-현재 MVP 배포 방식은 무료 우선 구조를 기본값으로 둡니다.
+현재 운영 방식은 무료 우선 구조를 기본값으로 둡니다.
 
-- GitHub Actions collection workflow가 6시간마다 수집/초안/검수 요청 job을 실행합니다.
-- GitHub Actions publish workflow가 1시간마다 승인 이후 채널 생성/렌더링/게시/백업/Storage cleanup job을 실행합니다.
+- GitHub Actions collection workflow가 KST 06:00, 18:00에 수집/초안/검수 요청 job을 실행합니다.
+- GitHub Actions publish workflow가 KST 07:00-19:00 사이 2시간 간격으로 승인 이후 채널 생성/렌더링/게시/백업/Storage cleanup job을 실행합니다.
 - Supabase Postgres가 운영 상태 DB 역할을 합니다.
 - Supabase Storage가 Instagram 게시용 public image URL을 제공합니다.
 - Supabase Edge Function이 Discord 승인/거절 버튼 이벤트를 처리합니다.
-- 별도 상시 서버나 worker는 1시간 단위보다 더 빠른 게시 즉시성이 필요해질 때 검토합니다.
+- 별도 상시 서버나 worker는 현재 schedule보다 더 빠른 게시 즉시성이 필요해질 때 검토합니다.
 
 ## 데이터 소유권
 
@@ -144,7 +144,7 @@ collected
 -> published / failed
 ```
 
-`channel_outputs`는 채널별 작업 상태를 따로 저장합니다. 현재 MVP의 활성 채널은 `instagram`입니다.
+`channel_outputs`는 채널별 작업 상태를 따로 저장합니다. 현재 활성 채널은 `instagram`입니다.
 
 ## 검증 명령
 

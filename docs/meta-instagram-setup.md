@@ -1,6 +1,6 @@
 ﻿# Meta / Instagram Setup
 
-이 문서는 Meta Developers에 앱이 없는 상태에서 Brand Pilot의 Instagram 실제 게시용 API 값을 새로 발급하는 절차를 정리합니다. 현재 MVP는 **Instagram API with Facebook Login** 흐름을 사용합니다. 즉 Instagram Professional 계정, 연결된 Facebook Page, Meta Developer App, Facebook Login 기반 User Access Token이 필요합니다.
+이 문서는 Meta Developers에 앱이 없는 상태에서 Brand Pilot의 Instagram 실제 게시용 API 값을 새로 발급하는 절차를 정리합니다. 현재 Brand Pilot은 **Instagram API with Facebook Login** 흐름을 사용합니다. 즉 Instagram Professional 계정, 연결된 Facebook Page, Meta Developer App, Facebook Login 기반 User Access Token이 필요합니다.
 
 참고 공식 문서:
 
@@ -354,7 +354,7 @@ INSTAGRAM_PUBLISH_ENABLED=true
 
 ## 10. Development Mode와 App Review 기준
 
-현재 MVP처럼 클라이언트 운영 계정 하나를 개발자가 관리하고, token을 발급한 Facebook 계정이 앱 role과 Page 권한을 갖고 있다면 Development Mode에서도 테스트가 가능합니다.
+현재처럼 클라이언트 운영 계정 하나를 개발자가 관리하고, token을 발급한 Facebook 계정이 앱 role과 Page 권한을 갖고 있다면 Development Mode에서도 테스트가 가능합니다.
 
 다만 나중에 여러 외부 사용자가 각자 Instagram 계정을 연결하는 SaaS 형태로 확장하려면 다음이 필요합니다.
 

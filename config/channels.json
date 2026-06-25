@@ -5,7 +5,7 @@
     "enabled": true,
     "format": "card_news",
     "template": "instagram-card-news-v1",
-    "notes": "MVP target. Generate about five square slides, caption, hashtags, and CTA."
+    "notes": "Active publishing target. Generate card-news slides, caption, hashtags, and optional CTA."
   },
   {
     "id": "blog",

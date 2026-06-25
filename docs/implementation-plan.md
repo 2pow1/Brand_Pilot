@@ -1,6 +1,6 @@
 # Implementation Plan
 
-이 문서는 Brand Pilot MVP 구현 범위와 현재 자동화 흐름을 추적하기 위한 작업 기록입니다.
+이 문서는 Brand Pilot 구현 범위와 현재 자동화 흐름을 추적하기 위한 작업 기록입니다.
 
 ## 전체 단계
 
@@ -28,9 +28,10 @@
    - `--mock`일 때만 API 없이 로컬 템플릿 payload로 변환
    - Blog, Facebook, LinkedIn 등 다른 채널로 확장 가능한 구조 유지
 7. Instagram 산출물 생성
-   - 1080x1080 카드뉴스 이미지 5장 렌더링
+   - v1은 1080x1080 카드뉴스 이미지 5장 렌더링
+   - v2 sketch template은 1080x1350 카드뉴스 2-8장 렌더링
    - caption, hashtags, 브랜드명 확인
-   - CTA URL이 설정된 경우에만 CTA, QR target URL 포함
+   - CTA URL 또는 정적 final CTA 이미지가 설정된 경우에만 CTA 사용
 8. Instagram 게시
    - Supabase Storage public URL 업로드
    - Meta / Instagram Graph API 게시
@@ -56,7 +57,7 @@
 - Discord Edge Function: 버튼 클릭으로 Supabase 상태 변경
 - `channel generate`: 승인된 초안을 GPT API로 Instagram 카드뉴스 payload에 맞게 재작성하고 `channel_generated`로 전환
 - `channel generate --mock`: API 호출 없이 로컬 템플릿 payload를 생성해 구조만 검증
-- `instagram render`: Instagram payload를 1080x1080 PNG 5장과 manifest로 렌더링하고 `publish_pending`로 전환
+- `instagram render`: Instagram payload를 템플릿에 맞는 PNG 카드뉴스와 manifest로 렌더링하고 `publish_pending`로 전환
 - `instagram upload`: 로컬 렌더 산출물을 Supabase Storage public bucket에 업로드하고 public manifest URL 기록
 - `instagram publish`: public image URL이 준비된 카드뉴스를 Instagram Graph API로 게시하고 `published`로 전환
 - `instagram publish --mock`: Meta API 호출 없이 게시 상태 전이를 검증
@@ -89,7 +90,7 @@ collected
 
 현재 GitHub Actions는 수집 workflow와 게시 workflow로 나뉩니다.
 
-수집 workflow는 6시간마다 아래 작업을 실행합니다.
+수집 workflow는 KST 06:00, 18:00에 아래 작업을 실행합니다.
 
 ```text
 doctor schedule
@@ -100,7 +101,7 @@ review request
 notion sync             # Notion 값이 있을 때만
 ```
 
-게시 workflow는 1시간마다 아래 작업을 실행합니다.
+게시 workflow는 KST 07:00-19:00 사이 2시간 간격으로 아래 작업을 실행합니다.
 
 ```text
 status
@@ -124,7 +125,6 @@ alert meta-token-expiry # Meta token 만료 임박/만료 시 Discord 알림
 
 ## 남은 개선 후보
 
-- 게시 전용 GitHub Actions workflow 분리
 - Meta token 갱신 운영 절차 자동 알림
 - DB row archive 정책 설계
 - 상태 페이지 또는 간단한 운영 대시보드

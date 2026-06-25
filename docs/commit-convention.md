@@ -95,7 +95,7 @@ Rollback:
 
 ## Version And Release
 
-2주 MVP 동안은 작은 기능 단위 커밋을 유지하고, 데모 가능한 지점에서 버전 태그를 붙입니다.
+초기 운영 단계에서는 작은 기능 단위 커밋을 유지하고, 검증 가능한 지점에서 버전 태그를 붙입니다.
 
 권장 태그:
 
@@ -105,7 +105,7 @@ v0.2.0-collect
 v0.3.0-draft
 v0.4.0-review
 v0.5.0-instagram
-v1.0.0-mvp
+v1.0.0-operational
 ```
 
 릴리즈 커밋 예시:

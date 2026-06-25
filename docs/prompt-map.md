@@ -40,12 +40,13 @@ When changing a prompt, check the matching registry entry first:
 
 For `instagram.sketch-card-news.v2`, edit prompt-side character and line budgets in `copy-limit-policy.js`. Renderer fit thresholds remain in `text-fit-policy.js`, and structured-output hard limits remain in `schema.js` because those values have different counting and fallback semantics.
 
-## Phased Cleanup Plan
+## Current Maintenance Status
 
-Phase 1 keeps runtime behavior unchanged and adds the prompt map plus registry. This makes the current system searchable before moving code.
+The prompt registry and related cleanup phases are now in place.
 
-Phase 2 moves the sketch v2 prompt, schema, text-fit policy, and renderer-facing contract into `src/prompts/instagram/sketch-card-news-v2`.
+- `src/prompts/registry.js` is the code-level index for prompt specs.
+- `src/prompts/instagram/sketch-card-news-v2/` owns the sketch v2 prompt, schema, copy limits, text-fit policy, and chrome policy.
+- `src/openai/responses.js` owns the shared OpenAI Responses API request and parsing path.
+- `test-fixtures/prompt-evals/` contains representative sketch v2 prompt eval cases.
 
-Phase 3 extracts the duplicated OpenAI Responses API request assembly into `src/openai/responses.js`.
-
-Phase 4 adds offline prompt eval fixtures for representative sketch v2 content so prompt, schema, and text-fit regressions are caught before visual render review.
+Keep this document and `src/prompts/registry.js` in sync whenever a prompt id, schema contract, renderer contract, or verification command changes.

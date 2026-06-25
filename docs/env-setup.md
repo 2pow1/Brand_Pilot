@@ -60,6 +60,9 @@ GitHub repository
 | `OPENAI_API_KEY` | 필요 | Secret | GPT 공통 초안 생성 및 승인 후 채널별 콘텐츠 변환 |
 | `OPENAI_MODEL` | 선택 | Variable | 기본값 `gpt-4.1-mini` |
 | `OPENAI_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://api.openai.com/v1` |
+| `OPENAI_IMAGE_MODEL` | 선택 | Variable | 기본값 `gpt-image-1`, v2 cover image 생성 |
+| `OPENAI_IMAGE_SIZE` | 선택 | Variable | 기본값 `1024x1536` |
+| `OPENAI_IMAGE_QUALITY` | 선택 | Variable | 기본값 `medium` |
 | `DISCORD_BOT_TOKEN` | 필요 | Secret | 검수 메시지 전송 |
 | `DISCORD_REVIEW_CHANNEL_ID` | 필요 | Secret | 검수 채널 ID |
 | `DISCORD_PUBLIC_KEY` | Edge Function 배포 시 필요 | Supabase secret | Discord interaction 서명 검증 |
@@ -75,6 +78,9 @@ GitHub repository
 | `META_GRAPH_BASE_URL` | 선택 | workflow 고정값 | 기본값 `https://graph.facebook.com/v25.0` |
 | `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram 게시 필수 | Secret | 게시 대상 Instagram business account |
 | `INSTAGRAM_PUBLISH_ENABLED` | workflow 전용 | Variable | `true`일 때만 Actions에서 실제 Instagram 게시 실행 |
+| `INSTAGRAM_TEMPLATE` | 선택 | Variable | `instagram-card-news-v1` 또는 `instagram-sketch-card-news-v2` |
+| `INSTAGRAM_COVER_IMAGE_ENABLED` | 선택 | Variable | `true`일 때 v2 cover background image 생성 |
+| `INSTAGRAM_FINAL_CTA_IMAGE_PATH` | 선택 | Variable | v2 마지막 카드를 대체할 정적 CTA 이미지 경로 |
 | `BRAND_COMPANY_NAME` | 선택 | Variable | 게시물에 노출할 회사명, 기본값 `GrowthLine` |
 | `BRAND_VOICE` | 선택 | Variable | 초안 생성용 브랜드 말투 |
 | `BRAND_SERVICE_SUMMARY` | 선택 | Variable | 초안 생성용 서비스 설명 |
@@ -154,9 +160,14 @@ OpenAI Platform
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_IMAGE_MODEL=gpt-image-1
+OPENAI_IMAGE_SIZE=1024x1536
+OPENAI_IMAGE_QUALITY=medium
 ```
 
 운영에서는 비용과 품질 기준에 맞춰 `OPENAI_MODEL`을 조정합니다. 모델명을 바꾼 뒤에는 낮은 limit으로 공통 초안 생성과 승인 후 채널별 변환을 각각 검증합니다.
+
+`OPENAI_IMAGE_*` 값은 `INSTAGRAM_TEMPLATE=instagram-sketch-card-news-v2`와 `INSTAGRAM_COVER_IMAGE_ENABLED=true`를 함께 사용할 때 cover background image 생성에 쓰입니다. 일반 초안 생성과 v1 카드뉴스 렌더링에는 필요하지 않습니다.
 
 검증 명령:
 
@@ -316,6 +327,15 @@ META_TOKEN_EXPIRY_WARNING_DAYS=7
 META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 ```
 
+Instagram 렌더링 옵션값:
+
+```env
+INSTAGRAM_PUBLISH_ENABLED=false
+INSTAGRAM_TEMPLATE=instagram-card-news-v1
+INSTAGRAM_COVER_IMAGE_ENABLED=false
+INSTAGRAM_FINAL_CTA_IMAGE_PATH=assets/instagram/growthline-open-chat-cta.png
+```
+
 `META_APP_ID`, `META_APP_SECRET` 확인:
 
 ```text
@@ -421,9 +441,15 @@ META_APP_SECRET
 
 ```text
 OPENAI_MODEL
+OPENAI_IMAGE_MODEL
+OPENAI_IMAGE_SIZE
+OPENAI_IMAGE_QUALITY
 SUPABASE_STORAGE_BUCKET
 META_TOKEN_EXPIRY_WARNING_DAYS
 INSTAGRAM_PUBLISH_ENABLED
+INSTAGRAM_TEMPLATE
+INSTAGRAM_COVER_IMAGE_ENABLED
+INSTAGRAM_FINAL_CTA_IMAGE_PATH
 BRAND_COMPANY_NAME
 BRAND_VOICE
 BRAND_SERVICE_SUMMARY
@@ -447,28 +473,28 @@ META_GRAPH_BASE_URL=https://graph.facebook.com/v25.0
 
 운영 기준:
 
-- collection workflow는 6시간마다 수집, 초안 생성, Discord 검수 요청, Notion sync를 실행합니다.
-- publish workflow는 1시간마다 승인된 콘텐츠의 채널 payload 생성, 카드뉴스 렌더링, Storage 업로드, Notion sync/backup, 백업 완료된 published 산출물의 Storage cleanup을 실행합니다.
+- collection workflow는 KST 06:00, 18:00에 수집, 초안 생성, Discord 검수 요청, Notion sync를 실행합니다.
+- publish workflow는 KST 07:00-19:00 사이 2시간 간격으로 승인된 콘텐츠의 채널 payload 생성, 카드뉴스 렌더링, Storage 업로드, Notion sync/backup, 백업 완료된 published 산출물의 Storage cleanup을 실행합니다.
 - `INSTAGRAM_PUBLISH_ENABLED` 기본값은 `false`입니다.
 - `false`이면 publish workflow가 실제 Instagram 게시만 건너뛰고 render/upload/Notion backup/cleanup은 계속 처리합니다.
 - `true`이면 publish workflow가 `doctor publish`를 먼저 실행한 뒤 `instagram publish --limit 3`으로 실제 Instagram 게시를 시도합니다.
 - Meta 계정 인증이나 access token이 불안정한 동안에는 `false`를 유지합니다.
 - Notion과 Meta 값은 해당 기능을 사용할 때만 필요합니다.
 
-현재 workflow는 카드뉴스 렌더링을 위해 `windows-latest` runner를 사용합니다. 렌더러가 `scripts/render-instagram-card-news.ps1`의 Windows PowerShell 및 `System.Drawing` 기반이기 때문입니다.
+현재 workflow는 `windows-latest` runner를 사용합니다. v1 renderer는 `scripts/render-instagram-card-news.ps1`의 Windows PowerShell 및 `System.Drawing` 기반이고, v2 sketch renderer는 Playwright Chromium 기반입니다.
 
-현재 collection workflow는 6시간마다 실행됩니다.
+현재 collection workflow는 KST 06:00, 18:00에 실행됩니다.
 
 ```yaml
 schedule:
-  - cron: '17 */6 * * *'
+  - cron: '0 9,21 * * *'
 ```
 
-현재 publish workflow는 1시간마다 실행됩니다.
+현재 publish workflow는 KST 07:00-19:00 사이 2시간 간격으로 실행됩니다.
 
 ```yaml
 schedule:
-  - cron: '11 * * * *'
+  - cron: '0 0,2,4,6,8,10,22 * * *'
 ```
 
 현재 token alert workflow는 매일 실행됩니다.
