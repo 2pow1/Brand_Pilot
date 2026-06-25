@@ -96,32 +96,33 @@ stateDiagram-v2
 ## 운영 파이프라인
 
 ```mermaid
-flowchart TD
-  subgraph Collection["Collection Pipeline<br/>KST 06:00 / 18:00"]
-    C1["doctor schedule"]
-    C2["status"]
-    C3["collect"]
-    C4["draft"]
-    C5["review request"]
-    C6["notion sync"]
-    C1 --> C2 --> C3 --> C4 --> C5 --> C6
-  end
+flowchart TB
+  C0["Collection Pipeline<br/>KST 06:00 / 18:00"]
+  C1["doctor schedule"]
+  C2["status"]
+  C3["collect"]
+  C4["draft"]
+  C5["review request"]
+  C6["notion sync"]
 
-  subgraph Publish["Publish Pipeline<br/>KST 07:00-19:00 / every 2 hours"]
-    P1["status"]
-    P2["channel generate"]
-    P3["instagram render"]
-    P4["instagram upload"]
-    P5["doctor publish"]
-    P6["instagram publish"]
-    P7["notion sync / backup"]
-    P8["storage cleanup"]
-    P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8
-  end
+  P0["Publish Pipeline<br/>KST 07:00-19:00<br/>every 2 hours"]
+  P1["status"]
+  P2["channel generate"]
+  P3["instagram render"]
+  P4["instagram upload"]
+  P5["doctor publish"]
+  P6["instagram publish"]
+  P7["notion sync / backup"]
+  P8["storage cleanup"]
 
-  subgraph Alert["Token Alert<br/>daily KST 09:31"]
-    A1["alert meta-token-expiry"]
-  end
+  A0["Token Alert<br/>daily KST 09:31"]
+  A1["alert meta-token-expiry"]
+
+  C0 --> C1 --> C2 --> C3 --> C4 --> C5 --> C6
+  C6 -. "별도 워크플로" .-> P0
+  P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8
+  P8 -. "별도 워크플로" .-> A0
+  A0 --> A1
 ```
 
 ## 기술 스택
