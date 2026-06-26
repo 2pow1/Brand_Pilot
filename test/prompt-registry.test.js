@@ -27,6 +27,7 @@ test('lists prompt specs in the prompt registry', () => {
     'draft.master.v1',
     'instagram.card-news.v1',
     'instagram.sketch-card-news.v2',
+    'instagram.freeform-card-news.v3',
     'instagram.cover-image.v1'
   ]);
   assert.equal(PROMPT_REGISTRY['draft.master.v1'].title, 'Master draft generation');
@@ -75,6 +76,18 @@ test('exposes runnable prompt builders and schemas', () => {
   assert.equal(sketchSpec.sourceFiles.includes('src/prompts/instagram/sketch-card-news-v2/prompt.js'), true);
   assert.equal(sketchSpec.verification.includes('node --no-warnings=ExperimentalWarning --test test/prompt-eval.test.js'), true);
   assert.equal(typeof sketchSpec.textFitPolicy.joinShortBodyLines, 'function');
+
+  const freeformSpec = getPromptSpec('instagram.freeform-card-news.v3');
+  const freeformPrompt = freeformSpec.buildPrompt({
+    brand,
+    item,
+    cardCount: 3
+  });
+  assert.equal(typeof freeformPrompt, 'string');
+  assert.equal(freeformSpec.schema, null);
+  assert.equal(freeformSpec.responseName, undefined);
+  assert.equal(freeformSpec.sourceFiles.includes('src/prompts/instagram/freeform-card-news-v3/prompt.js'), true);
+  assert.equal(freeformSpec.verification.includes('node --no-warnings=ExperimentalWarning --test test/freeform-card-news-prompt.test.js'), true);
 
   const imageSpec = getPromptSpec('instagram.cover-image.v1');
   const imagePrompt = imageSpec.buildPrompt('Sketch-note background');

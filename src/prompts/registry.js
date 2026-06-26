@@ -3,6 +3,7 @@ import { INSTAGRAM_CHANNEL_RESPONSE_SCHEMA } from '../channel/schema.js';
 import { buildDraftPrompt } from '../draft/prompt.js';
 import { DRAFT_RESPONSE_SCHEMA } from '../draft/schema.js';
 import { buildImagePrompt } from '../openai/image.js';
+import { INSTAGRAM_FREEFORM_CARD_NEWS_V3_PROMPT_SPEC } from './instagram/freeform-card-news-v3/index.js';
 import { INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC } from './instagram/sketch-card-news-v2/index.js';
 
 function freezeList(values = []) {
@@ -58,6 +59,8 @@ export const PROMPT_REGISTRY = Object.freeze({
   }),
 
   'instagram.sketch-card-news.v2': INSTAGRAM_SKETCH_CARD_NEWS_PROMPT_SPEC,
+
+  'instagram.freeform-card-news.v3': INSTAGRAM_FREEFORM_CARD_NEWS_V3_PROMPT_SPEC,
 
   'instagram.cover-image.v1': promptSpec({
     id: 'instagram.cover-image.v1',
