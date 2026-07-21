@@ -2,8 +2,8 @@ name: Brand Pilot Token Alert
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '31 0 * * *'
+  # schedule:
+  #   - cron: '31 0 * * *'
 
 jobs:
   token-alert:
